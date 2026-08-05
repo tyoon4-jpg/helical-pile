@@ -9,6 +9,7 @@ does not duplicate any calculation logic. If a number here looks wrong,
 the bug lives in the library (and should be caught by
 tests/test_worked_example_12m.py), not in this file.
 """
+import datetime
 import os
 
 os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")  # see README: p-y solver + many-core OpenBLAS
@@ -16,6 +17,7 @@ os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")  # see README: p-y solver + m
 import streamlit as st
 import plotly.graph_objects as go
 
+import report
 from helical_pile_design import loads, geotech, sizing, axial, structural, corrosion, torque, qaqc, connection
 from helical_pile_design.lateral_py import (
     ClaySoil, PileSection, solve_py, broms_ultimate_clay_kN, pushover, check_serviceability,
@@ -33,6 +35,12 @@ st.caption(
 # =====================================================================
 with st.sidebar:
     st.header("Project inputs")
+
+    with st.expander("Project info (calc package cover)", expanded=False):
+        project_name = st.text_input("Project name", "")
+        project_location = st.text_input("Location / pole ID", "")
+        engineer_name = st.text_input("Engineer", "")
+        calc_date = st.date_input("Date", datetime.date.today())
 
     with st.expander("Pole & luminaire (A1-A5)", expanded=True):
         h = st.number_input("Pole height, h (m)", 4.0, 20.0, 12.0, 0.5)
@@ -101,8 +109,12 @@ with st.sidebar:
     with st.expander("Pole-to-pile connection (Step 8)", expanded=False):
         n_bolts = st.selectbox("Number of anchor bolts", [4, 6, 8], index=0)
         bolt_circle_r_mm = st.number_input("Bolt circle radius (mm)", 50.0, 400.0, 175.0, 5.0)
+        bolt_diam_mm = st.number_input("Bolt diameter, nominal (mm)", 12.0, 50.0, 25.0, 1.0)
         Ab_mm2 = st.number_input("Bolt tensile stress area, Ab (mm^2)", 50.0, 2000.0, 391.0, 1.0)
         Fu_bolt_mpa = st.number_input("Bolt Fu (MPa, e.g. F1554 Gr 55)", 300.0, 900.0, 517.0, 1.0)
+        standoff_mm = st.number_input(
+            "Leveling-nut standoff (mm) -- bending addend applies above bolt diameter",
+            0.0, 150.0, 15.0, 1.0)
         fillet_mm = st.number_input("Shaft-to-plate fillet weld size (mm)", 4.0, 20.0, 8.0, 1.0)
         T_slip_kNm = st.number_input(
             "Pile torsional slip capacity (kN*m) [ASSUMED -- validate]", 0.0, 200.0, 30.0, 1.0)
@@ -167,8 +179,10 @@ P_req = torque.required_ultimate_axial_kN(2.0 * strength.P_kN, 2.0 * T_frost)
 T_min = torque.t_min_kNm(P_req, Kt)
 
 bolts = connection.BoltGroup(n_bolts=n_bolts, bolt_circle_radius_m=bolt_circle_r_mm / 1000.0,
-                              Ab_m2=Ab_mm2 / 1e6, Fu_kpa=Fu_bolt_mpa * 1000.0)
-bolt_res = connection.bolt_check(strength.M_kNm, bolts)
+                              Ab_m2=Ab_mm2 / 1e6, Fu_kpa=Fu_bolt_mpa * 1000.0,
+                              bolt_diam_m=bolt_diam_mm / 1000.0)
+bolt_bending_M = connection.bolt_bending_moment_kNm(strength.V_kN, bolts, standoff_mm / 1000.0)
+bolt_res = connection.bolt_check(strength.M_kNm, bolts, bending_moment_kNm=bolt_bending_M)
 weld_res = connection.weld_check(strength.M_kNm, strength.V_kN, D_SHAFT, fillet_mm / 1000.0)
 torsion_ok = connection.torsion_slip_check(T_slip_kNm, strength.Tz_kNm)
 
@@ -202,6 +216,20 @@ c1.metric("V_u (kN)", f"{strength.V_kN:.2f}")
 c2.metric("M_u (kN*m)", f"{strength.M_kNm:.2f}")
 c3.metric("P_u (kN)", f"{strength.P_kN:.2f}")
 c4.metric("e = M/V (m)", f"{strength.e_m:.2f}")
+
+st.subheader("Step 2 -- Geotechnical parameterization")
+c1, c2 = st.columns(2)
+c1.metric("Su, undrained shear strength (kPa)", f"{su:.1f}")
+c2.metric("eps50", f"{eps50:.4f}")
+if eps50_manual:
+    st.caption("eps50 manually overridden -- not derived from the Matlock Su band.")
+else:
+    su_band = "soft (Su < 25 kPa)" if su < 25.0 else "medium (25 <= Su <= 50 kPa)" if su <= 50.0 else "stiff (Su > 50 kPa)"
+    st.caption(f"eps50 = {eps50} from the Matlock Su band -- classified {su_band}.")
+st.caption(
+    "p-y parameter basis: " + ("lab/CPT data" if py_lab_or_cpt else "SPT correlation only")
+    + (" -- triggers a Step 10 load-test recommendation." if not py_lab_or_cpt else ".")
+)
 
 st.subheader("Step 3 -- Preliminary sizing / embedment")
 st.write(f"Trial shaft {d_shaft_mm} mm OD, pile tip depth {L_pile:.2f} m")
@@ -268,16 +296,27 @@ st.write(f"Zinc life {corr.zinc_life_yr:.0f} yr, sacrificial thickness {corr.t_s
 st.caption(corr.classification)
 
 st.subheader("Step 8 -- Pole-to-pile connection")
-c1, c2, c3 = st.columns(3)
-c1.metric("Bolt tension (kN)", f"{bolt_res.T_bolt_kN:.1f}", "PASS" if bolt_res.passes else "FAIL")
-c2.metric("Weld demand (kN/m)", f"{weld_res.demand_kN_per_m:.1f}", "PASS" if weld_res.passes else "FAIL")
-c3.metric("Torsion slip demand (kN*m)", f"{strength.Tz_kNm:.2f}", "PASS" if torsion_ok else "FAIL")
+c1, c2, c3, c4 = st.columns(4)
+c1.metric("Bolt tension (kN)", f"{bolt_res.T_bolt_kN:.1f}")
+c2.metric("Bolt combined stress (MPa)", f"{bolt_res.sigma_total_kpa/1000:.0f}",
+          "PASS" if bolt_res.passes else "FAIL")
+c3.metric("Weld demand (kN/m)", f"{weld_res.demand_kN_per_m:.1f}", "PASS" if weld_res.passes else "FAIL")
+c4.metric("Torsion slip demand (kN*m)", f"{strength.Tz_kNm:.2f}", "PASS" if torsion_ok else "FAIL")
 st.caption(
-    f"Bolt capacity {bolt_res.T_capacity_kN:.1f} kN ({n_bolts} bolts on {bolt_circle_r_mm:.0f} mm "
-    f"radius); weld capacity {weld_res.capacity_kN_per_m:.1f} kN/m ({fillet_mm:.0f} mm fillet); "
+    f"Bolt combined stress = tension {bolt_res.sigma_tension_kpa/1000:.0f} MPa + bending "
+    f"{bolt_res.sigma_bending_kpa/1000:.0f} MPa, capacity {bolt_res.sigma_capacity_kpa/1000:.0f} MPa "
+    f"({n_bolts} bolts on {bolt_circle_r_mm:.0f} mm radius, {bolt_diam_mm:.0f} mm nominal diameter); "
+    f"weld capacity {weld_res.capacity_kN_per_m:.1f} kN/m ({fillet_mm:.0f} mm fillet); "
     f"pile torsional slip capacity {T_slip_kNm:.1f} kN*m required >= 3x Tz "
     f"({3 * strength.Tz_kNm:.2f} kN*m)."
 )
+if standoff_mm <= bolt_diam_mm:
+    st.caption(f"Leveling-nut standoff ({standoff_mm:.0f} mm) does not exceed the bolt diameter "
+               f"({bolt_diam_mm:.0f} mm) -- no bending addend per doc Section 8.2.")
+else:
+    st.caption(f"Bending moment from standoff: M_b = {bolt_bending_M:.3f} kN*m, using a solid-shank "
+               f"section modulus from the NOMINAL bolt diameter (overestimates S, so UNDERESTIMATES "
+               f"this stress -- replace with the manufacturer's thread-root modulus before final design).")
 if strength.Tz_kNm == 0.0:
     st.caption("Tz = 0 (arm eccentricity = 0) -- torsion slip check is trivially satisfied; "
                "set a nonzero luminaire arm eccentricity for single-arm pole configurations.")
@@ -294,6 +333,35 @@ if triggers.triggered_tests:
         st.write(f"- {r}")
 else:
     st.success("No load test triggers hit")
+
+st.divider()
+st.subheader("Calc package export")
+st.caption(
+    "Generates a Word (.docx) calc package -- cover page, one-page pass/fail checklist, and "
+    "Step 1-10 detail with the Step 5 charts embedded -- auto-filled from the current sidebar."
+)
+if st.button("Generate calc package"):
+    ctx = dict(
+        project=dict(name=project_name, location=project_location, engineer=engineer_name,
+                     date=calc_date.isoformat() if calc_date else ""),
+        d_shaft_mm=d_shaft_mm, t_nominal_mm=t_nominal_mm, n_helix=n_helix, L_pile=L_pile,
+        strength=strength, service=service,
+        embed=embed, comp_check=comp_check, Qu_comp=Qu_comp, Qu_cyl=Qu_cyl,
+        tens_check=tens_check, T_frost=T_frost, Tu=Tu,
+        Hu=Hu, po=po, sol_service=sol_service, sol_strength=sol_strength, svc_check=svc_check,
+        section=section, h1=h1, t_c_mm=t_c_mm, corr=corr,
+        bolt_res=bolt_res, weld_res=weld_res, torsion_ok=torsion_ok, bolt_bending_M=bolt_bending_M,
+        n_bolts=n_bolts, bolt_circle_r_mm=bolt_circle_r_mm, bolt_diam_mm=bolt_diam_mm,
+        standoff_mm=standoff_mm, fillet_mm=fillet_mm, T_slip_kNm=T_slip_kNm,
+        P_req=P_req, T_min=T_min, Kt=Kt, Kt_established=Kt_established,
+        triggers=triggers, overall_pass=overall_pass,
+    )
+    docx_bytes = report.build_calc_package_docx(ctx)
+    st.download_button(
+        "Download calc_package.docx", data=docx_bytes,
+        file_name="helical_pile_calc_package.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
 
 st.divider()
 st.caption(

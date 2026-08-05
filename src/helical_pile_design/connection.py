@@ -23,6 +23,7 @@ class BoltGroup:
     bolt_circle_radius_m: float
     Ab_m2: float           # tensile stress area per bolt
     Fu_kpa: float           # bolt ultimate strength (e.g. F1554 Gr 55/105)
+    bolt_diam_m: float      # nominal shank diameter -- used only for the standoff bending check
 
     def sum_ci_squared_m2(self) -> float:
         """Sum(ci^2) for the worst-case bending axis, n bolts evenly spaced.
@@ -35,6 +36,10 @@ class BoltGroup:
 class BoltCheckResult:
     T_bolt_kN: float
     T_capacity_kN: float
+    sigma_tension_kpa: float
+    sigma_bending_kpa: float
+    sigma_total_kpa: float
+    sigma_capacity_kpa: float
     passes: bool
 
 
@@ -45,25 +50,51 @@ def bolt_tension_kN(M_kNm: float, bolts: BoltGroup, P_uplift_kN: float = 0.0) ->
     return M_kNm * c_max / sum_ci2 + P_uplift_kN / bolts.n_bolts
 
 
-def bolt_check(M_kNm: float, bolts: BoltGroup, P_uplift_kN: float = 0.0,
-                phi_t: float = PHI_T_BOLT) -> BoltCheckResult:
-    T_bolt = bolt_tension_kN(M_kNm, bolts, P_uplift_kN)
-    T_cap = phi_t * 0.75 * bolts.Fu_kpa * bolts.Ab_m2
-    return BoltCheckResult(T_bolt_kN=T_bolt, T_capacity_kN=T_cap, passes=T_bolt <= T_cap)
+def bolt_bending_moment_kNm(V_kN: float, bolts: BoltGroup, standoff_m: float) -> float:
+    """Additional bolt bending moment from leveling-nut standoff, if standoff
+    exceeds one bolt diameter. Doc Section 8.2: M_b = (V/n) * standoff / 2.
 
-
-def bolt_bending_stress_kpa(V_kN: float, n_bolts: int, standoff_m: float, Ab_m2: float,
-                             bolt_diam_m: float) -> float:
-    """Additional bolt bending stress from leveling-nut standoff, if
-    standoff exceeds one bolt diameter. Doc Section 8.2:
-        M_b = (V/n) * standoff / 2
-    Returned as an equivalent stress addend (M_b / section modulus of the
-    bolt is left to the caller since it depends on thread root area).
+    Returns a MOMENT (kN*m) -- convert to stress with `bolt_section_modulus_m3`
+    and combine into `bolt_check`. (Previously named `bolt_bending_stress_kpa`,
+    which was misleading: it never returned a stress.)
     """
-    if standoff_m <= bolt_diam_m:
+    if standoff_m <= bolts.bolt_diam_m:
         return 0.0
-    shear_per_bolt = V_kN / n_bolts
-    return shear_per_bolt * standoff_m / 2.0  # kN*m; combine with bolt Z as needed
+    shear_per_bolt = V_kN / bolts.n_bolts
+    return shear_per_bolt * standoff_m / 2.0
+
+
+def bolt_section_modulus_m3(bolt_diam_m: float) -> float:
+    """Elastic section modulus of a solid circular bolt shank, S = pi*d^3/32.
+
+    Uses the NOMINAL bolt diameter as a stand-in for the (smaller) thread-root
+    diameter -- this overestimates S and therefore UNDERESTIMATES bending
+    stress. Acceptable for a preliminary screen only; replace with the
+    manufacturer's actual thread-root section modulus before final design.
+    """
+    return math.pi * bolt_diam_m ** 3 / 32.0
+
+
+def bolt_check(M_kNm: float, bolts: BoltGroup, P_uplift_kN: float = 0.0,
+                bending_moment_kNm: float = 0.0, phi_t: float = PHI_T_BOLT) -> BoltCheckResult:
+    """Combines axial (tension + uplift) and standoff-bending stress into a
+    single combined-stress check, per Doc Section 8.2. With
+    `bending_moment_kNm=0.0` (no standoff bending) this reduces exactly to
+    the prior tension-only check: T_bolt <= phi_t*0.75*Fu*Ab.
+    """
+    T_bolt = bolt_tension_kN(M_kNm, bolts, P_uplift_kN)
+    sigma_tension = T_bolt / bolts.Ab_m2
+    Z_bolt = bolt_section_modulus_m3(bolts.bolt_diam_m)
+    sigma_bending = bending_moment_kNm / Z_bolt if Z_bolt > 0 else 0.0
+    sigma_total = sigma_tension + sigma_bending
+    sigma_capacity = phi_t * 0.75 * bolts.Fu_kpa
+    T_cap = sigma_capacity * bolts.Ab_m2  # kept for display -- tension-only capacity in force terms
+    return BoltCheckResult(
+        T_bolt_kN=T_bolt, T_capacity_kN=T_cap,
+        sigma_tension_kpa=sigma_tension, sigma_bending_kpa=sigma_bending,
+        sigma_total_kpa=sigma_total, sigma_capacity_kpa=sigma_capacity,
+        passes=sigma_total <= sigma_capacity,
+    )
 
 
 @dataclass

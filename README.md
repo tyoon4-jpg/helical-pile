@@ -74,13 +74,22 @@ plots update live. This app duplicates no calculation logic -- it only
 calls into the library above, so any correctness fix belongs in the
 library (and its regression test), not in `app/streamlit_app.py`.
 
+The "Calc package export" button at the bottom of the page (see
+`app/report.py`) generates a Word `.docx` -- cover page, one-page
+pass/fail checklist, and Step 1-10 detail with the Step 5 charts embedded
+as static images -- auto-filled from whatever is currently in the
+sidebar. Like the rest of the app, it duplicates no calculation logic,
+only formats already-computed results into a document.
+
 The cylindrical-shear axial method (Step 4.2, `axial.cylindrical_shear_compression_kN`)
 and the pole-to-pile connection design (Step 8, `connection.py` -- bolt
-tension, weld, and torsion slip checks) are wired into the UI. The bolt
-bending stress addend from leveling-nut standoff
-(`connection.bolt_bending_stress_kpa`) is not wired in yet -- it needs a
-per-bolt section modulus not modeled elsewhere in this MVP; combine that
-value with the bolt's Z manually if standoff exceeds one bolt diameter.
+combined tension + standoff-bending stress, weld, and torsion slip checks)
+are wired into the UI. The bolt bending term uses a solid-shank section
+modulus (`connection.bolt_section_modulus_m3`) computed from the *nominal*
+bolt diameter as a stand-in for the true thread-root diameter -- this
+overestimates the section modulus and therefore underestimates the
+bending stress; replace with the manufacturer's thread-root modulus
+before final design.
 
 `tests/test_worked_example_12m.py` locks the entire engine to the
 independently cross-checked 12 m pole / medium-stiff-clay worked example
@@ -138,12 +147,12 @@ survive contact with an automated regression test.
 
 ## Suggested next steps
 
-1. Wrap this package in a Streamlit app: sliders/inputs for A1-A18, live
-   capacity ratios, plotly charts of the p-y curves and deflection/moment
-   diagrams (the solver already returns everything needed for these).
-2. Add a "generate calc report" action that reuses this conversation's
-   pandoc/docx pipeline to produce the Word calc package + one-page
-   checklist, auto-filled from the current project's inputs and results.
-3. Only after validating the MVP with real projects, consider the
-   productized path (FastAPI backend + React frontend, multi-project
-   management, PDF sealing) discussed in the architecture recommendation.
+The Streamlit app (sliders/inputs for A1-A18, live capacity ratios, plotly
+charts), the "generate calc package" export (Word calc package + a
+one-page pass/fail checklist, auto-filled from the current sidebar -- see
+`app/report.py`), and the Step 8 bolt combined-stress check (tension +
+standoff bending, `connection.bolt_check`) are all done.
+
+Only after validating the MVP with real projects, consider the productized
+path (FastAPI backend + React frontend, multi-project management, PDF
+sealing) discussed in the architecture recommendation.
