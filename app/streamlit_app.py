@@ -17,6 +17,7 @@ os.environ.setdefault("OPENBLAS_NUM_THREADS", "1")  # see README: p-y solver + m
 import streamlit as st
 import plotly.graph_objects as go
 
+import cad
 import report
 from helical_pile_design import loads, geotech, sizing, axial, structural, corrosion, torque, qaqc, connection
 from helical_pile_design.lateral_py import (
@@ -124,87 +125,120 @@ with st.sidebar:
 # =====================================================================
 D_SHAFT = d_shaft_mm / 1000.0
 
-pole = loads.PoleGeometry(height_m=h, base_diam_m=b_base, top_diam_m=b_top,
-                           projected_area_m2=A_pole, weight_kN=W_pole, Cd=Cd_pole)
-lum = loads.LuminaireLoad(epa_m2=epa, weight_kN=W_lum, arm_eccentricity_m=arm_ecc)
-wind_strength = loads.WindEnvironment(V_ms=V_ms, Kz_top=Kz_top, Kz_centroid=Kz_centroid,
-                                       Kd=Kd, G=G, service_pressure_ratio=service_ratio)
-wind_service = loads.service_wind_environment(wind_strength)
+with st.status("Running design calculation pipeline...", expanded=False) as status:
+    pole = loads.PoleGeometry(height_m=h, base_diam_m=b_base, top_diam_m=b_top,
+                               projected_area_m2=A_pole, weight_kN=W_pole, Cd=Cd_pole)
+    lum = loads.LuminaireLoad(epa_m2=epa, weight_kN=W_lum, arm_eccentricity_m=arm_ecc)
+    wind_strength = loads.WindEnvironment(V_ms=V_ms, Kz_top=Kz_top, Kz_centroid=Kz_centroid,
+                                           Kd=Kd, G=G, service_pressure_ratio=service_ratio)
+    wind_service = loads.service_wind_environment(wind_strength)
 
-strength = loads.base_reactions(pole, lum, wind_strength, reveal_m=reveal, dead_load_factor=1.25)
-service = loads.base_reactions(pole, lum, wind_service, reveal_m=reveal)
+    strength = loads.base_reactions(pole, lum, wind_strength, reveal_m=reveal, dead_load_factor=1.25)
+    service = loads.base_reactions(pole, lum, wind_service, reveal_m=reveal)
+    st.write(f":material/check_circle: **Step 1 -- Loads:** Vu={strength.V_kN:.1f} kN, "
+             f"Mu={strength.M_kNm:.1f} kN·m, Pu={strength.P_kN:.1f} kN")
 
-helix = sizing.HelixConfig(diameters_m=[d / 1000.0 for d in helix_diam_mm], depths_m=helix_depth_m,
-                            shaft_standoff_below_bottom_helix_m=standoff)
-L_pile = helix.tip_depth_m
-embed = sizing.check_embedment(helix, D_SHAFT, d_f, L_pile)
+    helix = sizing.HelixConfig(diameters_m=[d / 1000.0 for d in helix_diam_mm], depths_m=helix_depth_m,
+                                shaft_standoff_below_bottom_helix_m=standoff)
+    L_pile = helix.tip_depth_m
+    embed = sizing.check_embedment(helix, D_SHAFT, d_f, L_pile)
+    icon = "check_circle" if embed.all_pass else "error"
+    st.write(f":material/{icon}: **Step 3 -- Sizing & embedment:** tip depth {L_pile:.2f} m "
+             f"({'OK' if embed.all_pass else 'FAILS'})")
 
-corr = corrosion.design_corrosion(t_nominal_mm=t_nominal_mm, t_zn_um=t_zn_um, r_zn_um_per_yr=r_zn,
-                                   r_s_um_per_yr=r_s, design_life_yr=design_life,
-                                   resistivity_ohm_cm=resistivity, ph=ph)
-t_c_mm = corr.t_corroded_mm
+    corr = corrosion.design_corrosion(t_nominal_mm=t_nominal_mm, t_zn_um=t_zn_um, r_zn_um_per_yr=r_zn,
+                                       r_s_um_per_yr=r_s, design_life_yr=design_life,
+                                       resistivity_ohm_cm=resistivity, ph=ph)
+    t_c_mm = corr.t_corroded_mm
+    st.write(f":material/check_circle: **Step 7 -- Corrosion:** {t_nominal_mm:.1f} mm nominal -> "
+             f"{t_c_mm:.2f} mm corroded over {design_life:.0f} yr")
 
-L_eff = max(helix.top_depth_m - d_f, 0.0)
-Qu_comp = axial.individual_bearing_compression_kN(helix.diameters_m, D_SHAFT, su, L_eff,
-                                                    alpha_override=alpha_override)
-D_h_bottom = helix.diameters_m[helix.depths_m.index(helix.bottom_helix_depth_m)]
-D_h_avg = sum(helix.diameters_m) / len(helix.diameters_m)
-L_c = helix.bottom_helix_depth_m - helix.top_depth_m
-Qu_cyl = axial.cylindrical_shear_compression_kN(
-    D_h_bottom_m=D_h_bottom, D_shaft_m=D_SHAFT, su_kpa=su,
-    D_h_avg_m=D_h_avg, L_c_m=L_c, L_eff_m=L_eff,
-)
-comp_check = axial.check_compression(Qu_comp, Qu_cyl, strength.P_kN)
+    L_eff = max(helix.top_depth_m - d_f, 0.0)
+    Qu_comp = axial.individual_bearing_compression_kN(helix.diameters_m, D_SHAFT, su, L_eff,
+                                                        alpha_override=alpha_override)
+    D_h_bottom = helix.diameters_m[helix.depths_m.index(helix.bottom_helix_depth_m)]
+    D_h_avg = sum(helix.diameters_m) / len(helix.diameters_m)
+    L_c = helix.bottom_helix_depth_m - helix.top_depth_m
+    Qu_cyl = axial.cylindrical_shear_compression_kN(
+        D_h_bottom_m=D_h_bottom, D_shaft_m=D_SHAFT, su_kpa=su,
+        D_h_avg_m=D_h_avg, L_c_m=L_c, L_eff_m=L_eff,
+    )
+    comp_check = axial.check_compression(Qu_comp, Qu_cyl, strength.P_kN)
 
-T_frost = axial.frost_uplift_demand_kN(tau_ad, D_SHAFT, d_f)
-Tu = axial.individual_bearing_tension_kN(helix.diameters_m, D_SHAFT, su, L_eff_m=0.0)
-tens_check = axial.check_tension(Tu, Tu * 1.3, T_frost)
+    T_frost = axial.frost_uplift_demand_kN(tau_ad, D_SHAFT, d_f)
+    Tu = axial.individual_bearing_tension_kN(helix.diameters_m, D_SHAFT, su, L_eff_m=0.0)
+    tens_check = axial.check_tension(Tu, Tu * 1.3, T_frost)
+    icon = "check_circle" if comp_check.passes and tens_check.passes else "error"
+    st.write(f":material/{icon}: **Step 4 -- Axial capacity:** compression FS={comp_check.FS_actual:.1f}, "
+             f"tension FS={tens_check.FS_actual:.1f}")
 
-Fy_kpa = Fy_mpa * 1000.0
-pile_section = PileSection(D_m=D_SHAFT, t_m=t_c_mm / 1000.0)
-soil = ClaySoil(su_kpa=su, gamma_kNm3=gamma, gamma_sub_kNm3=gamma - 9.81, gwt_depth_m=gwt,
-                eps50=eps50, frost_depth_m=d_f)
+    Fy_kpa = Fy_mpa * 1000.0
+    pile_section = PileSection(D_m=D_SHAFT, t_m=t_c_mm / 1000.0)
+    soil = ClaySoil(su_kpa=su, gamma_kNm3=gamma, gamma_sub_kNm3=gamma - 9.81, gwt_depth_m=gwt,
+                    eps50=eps50, frost_depth_m=d_f)
 
-Hu = broms_ultimate_clay_kN(su, D_SHAFT, L_m=L_pile, e_m=strength.e_m, d_f_m=d_f)
-sol_service = solve_py(service.V_kN, -service.M_kNm, pile_section, soil, L_m=L_pile)
-sol_strength = solve_py(strength.V_kN, -strength.M_kNm, pile_section, soil, L_m=L_pile)
-svc_check = check_serviceability(sol_service) if sol_service else None
-po = pushover(strength.V_kN, -strength.M_kNm, pile_section, soil, L_m=L_pile)
+    Hu = broms_ultimate_clay_kN(su, D_SHAFT, L_m=L_pile, e_m=strength.e_m, d_f_m=d_f)
+    sol_service = solve_py(service.V_kN, -service.M_kNm, pile_section, soil, L_m=L_pile)
+    sol_strength = solve_py(strength.V_kN, -strength.M_kNm, pile_section, soil, L_m=L_pile)
+    svc_check = check_serviceability(sol_service) if sol_service else None
+    po = pushover(strength.V_kN, -strength.M_kNm, pile_section, soil, L_m=L_pile)
+    lateral_ok = po.passes() and (svc_check.passes if svc_check else False)
+    icon = "check_circle" if lateral_ok else "error"
+    st.write(f":material/{icon}: **Step 5 -- Lateral p-y solve:** Broms Hu={Hu:.1f} kN, "
+             f"pushover lambda_ult={po.lambda_ult:.1f}")
 
-section = structural.section_properties(D_SHAFT, t_c_mm / 1000.0, Fy_kpa)
-h1 = structural.h1_interaction(strength.P_kN, sol_strength.M_max_kNm if sol_strength else 0.0,
-                                Fy_kpa, section)
+    section = structural.section_properties(D_SHAFT, t_c_mm / 1000.0, Fy_kpa)
+    h1 = structural.h1_interaction(strength.P_kN, sol_strength.M_max_kNm if sol_strength else 0.0,
+                                    Fy_kpa, section)
+    icon = "check_circle" if h1.passes else "error"
+    st.write(f":material/{icon}: **Step 6 -- Structural (AISC 360):** H1 ratio={h1.ratio:.3f}")
 
-P_req = torque.required_ultimate_axial_kN(2.0 * strength.P_kN, 2.0 * T_frost)
-T_min = torque.t_min_kNm(P_req, Kt)
+    P_req = torque.required_ultimate_axial_kN(2.0 * strength.P_kN, 2.0 * T_frost)
+    T_min = torque.t_min_kNm(P_req, Kt)
+    st.write(f":material/check_circle: **Step 9 -- Installation torque:** "
+             f"T_min={T_min:.2f} kN·m at Kt={Kt}")
 
-bolts = connection.BoltGroup(n_bolts=n_bolts, bolt_circle_radius_m=bolt_circle_r_mm / 1000.0,
-                              Ab_m2=Ab_mm2 / 1e6, Fu_kpa=Fu_bolt_mpa * 1000.0,
-                              bolt_diam_m=bolt_diam_mm / 1000.0)
-bolt_bending_M = connection.bolt_bending_moment_kNm(strength.V_kN, bolts, standoff_mm / 1000.0)
-bolt_res = connection.bolt_check(strength.M_kNm, bolts, bending_moment_kNm=bolt_bending_M)
-weld_res = connection.weld_check(strength.M_kNm, strength.V_kN, D_SHAFT, fillet_mm / 1000.0)
-torsion_ok = connection.torsion_slip_check(T_slip_kNm, strength.Tz_kNm)
+    bolts = connection.BoltGroup(n_bolts=n_bolts, bolt_circle_radius_m=bolt_circle_r_mm / 1000.0,
+                                  Ab_m2=Ab_mm2 / 1e6, Fu_kpa=Fu_bolt_mpa * 1000.0,
+                                  bolt_diam_m=bolt_diam_mm / 1000.0)
+    bolt_bending_M = connection.bolt_bending_moment_kNm(strength.V_kN, bolts, standoff_mm / 1000.0)
+    bolt_res = connection.bolt_check(strength.M_kNm, bolts, bending_moment_kNm=bolt_bending_M)
+    weld_res = connection.weld_check(strength.M_kNm, strength.V_kN, D_SHAFT, fillet_mm / 1000.0)
+    torsion_ok = connection.torsion_slip_check(T_slip_kNm, strength.Tz_kNm)
+    conn_ok = bolt_res.passes and weld_res.passes and torsion_ok
+    icon = "check_circle" if conn_ok else "error"
+    st.write(f":material/{icon}: **Step 8 -- Pole-to-pile connection:** bolts, weld, and torsion slip "
+             f"{'all pass' if conn_ok else 'have failures'}")
 
-trig_inputs = qaqc.LoadTestTriggerInputs(
-    kt_established_by_ac358=Kt_established,
-    frost_uplift_relies_on_assumed_values=True,
-    py_params_from_lab_or_cpt=py_lab_or_cpt,
-    predicted_y_over_limit_ratio=(
-        abs(sol_service.y_gl_mm) / 1000.0 / svc_check.y_limit_m if sol_service else 1.0),
-    n_production_piles=1,
-    variable_or_unfamiliar_soils=False,
-)
-triggers = qaqc.evaluate_load_test_triggers(trig_inputs)
+    trig_inputs = qaqc.LoadTestTriggerInputs(
+        kt_established_by_ac358=Kt_established,
+        frost_uplift_relies_on_assumed_values=True,
+        py_params_from_lab_or_cpt=py_lab_or_cpt,
+        predicted_y_over_limit_ratio=(
+            abs(sol_service.y_gl_mm) / 1000.0 / svc_check.y_limit_m if sol_service else 1.0),
+        n_production_piles=1,
+        variable_or_unfamiliar_soils=False,
+    )
+    triggers = qaqc.evaluate_load_test_triggers(trig_inputs)
+    icon = "check_circle" if not triggers.triggered_tests else "flag"
+    trig_summary = "none" if not triggers.triggered_tests else ", ".join(sorted(triggers.triggered_tests))
+    st.write(f":material/{icon}: **Step 10 -- QA/QC triggers:** {trig_summary}")
+
+    overall_pass = all([
+        embed.all_pass, comp_check.passes, tens_check.passes,
+        svc_check.passes if svc_check else False, po.passes(), h1.passes,
+        bolt_res.passes, weld_res.passes, torsion_ok,
+    ])
+    status.update(
+        label=("Calculation pipeline complete -- all checks pass" if overall_pass
+               else "Calculation pipeline complete -- one or more checks fail"),
+        state="complete" if overall_pass else "error",
+        expanded=not overall_pass,
+    )
 
 # =====================================================================
 # Display
 # =====================================================================
-overall_pass = all([
-    embed.all_pass, comp_check.passes, tens_check.passes,
-    svc_check.passes if svc_check else False, po.passes(), h1.passes,
-    bolt_res.passes, weld_res.passes, torsion_ok,
-])
 if overall_pass:
     st.success("Overall: all implemented checks PASS")
 else:
@@ -361,6 +395,28 @@ if st.button("Generate calc package"):
         "Download calc_package.docx", data=docx_bytes,
         file_name="helical_pile_calc_package.docx",
         mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    )
+
+st.divider()
+st.subheader("Pile configuration CAD drawing")
+st.caption(
+    "Generates a DXF drawing (elevation + connection plan) of the pile configuration from "
+    "the current sidebar inputs -- open in AutoCAD, Civil3D, or any DXF-compatible CAD tool."
+)
+if st.button("Generate CAD drawing"):
+    cad_ctx = dict(
+        project_name=project_name, project_location=project_location,
+        engineer_name=engineer_name, calc_date=calc_date.isoformat() if calc_date else "",
+        d_shaft_mm=d_shaft_mm, t_nominal_mm=t_nominal_mm,
+        helix_diam_mm=helix_diam_mm, helix_depth_m=helix_depth_m,
+        L_pile_m=L_pile, reveal_m=reveal, d_f_m=d_f,
+        n_bolts=n_bolts, bolt_circle_r_mm=bolt_circle_r_mm, bolt_diam_mm=bolt_diam_mm,
+    )
+    dxf_bytes = cad.build_pile_configuration_dxf(cad_ctx)
+    st.download_button(
+        "Download pile_configuration.dxf", data=dxf_bytes,
+        file_name="pile_configuration.dxf",
+        mime="application/dxf",
     )
 
 st.divider()
