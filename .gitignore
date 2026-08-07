@@ -6,3 +6,22 @@ __pycache__/
 venv/
 build/
 dist/
+# Ignore specific system junk files
+Thumbs.db
+.DS_Store
+
+# Ignore specific folders (add a trailing slash)
+node_modules/
+bin/
+obj/
+.vs/
+.idea/
+
+# Ignore all files ending with a specific extension
+*.log
+*.tmp
+*.exe
+
+# Ignore environment/secret files containing API keys
+.env
+config.json
