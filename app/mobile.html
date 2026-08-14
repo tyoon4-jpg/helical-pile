@@ -1,0 +1,1098 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<title>Helical Pile Design -- Mobile</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --border: #dde1e6;
+    --text: #1a1d21;
+    --muted: #5b6470;
+    --accent: #2563eb;
+    --pass: #15803d;
+    --pass-bg: #dcfce7;
+    --fail: #b91c1c;
+    --fail-bg: #fee2e2;
+    --warn: #b45309;
+    --warn-bg: #fef3c7;
+    --input-bg: #fbfbfc;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #121417;
+      --card: #1b1e23;
+      --border: #2c313a;
+      --text: #eaecef;
+      --muted: #9aa4b2;
+      --accent: #5b8cff;
+      --pass: #4ade80;
+      --pass-bg: #113321;
+      --fail: #f87171;
+      --fail-bg: #3a1414;
+      --warn: #fbbf24;
+      --warn-bg: #3a2c0a;
+      --input-bg: #14171b;
+    }
+  }
+  * { box-sizing: border-box; }
+  html, body {
+    margin: 0; padding: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 12px 12px 90px; }
+
+  header.top {
+    padding: 14px 4px 6px;
+  }
+  header.top h1 { font-size: 1.25rem; margin: 0 0 2px; }
+  header.top p { margin: 0; color: var(--muted); font-size: 0.85rem; line-height: 1.35; }
+
+  details.card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 10px;
+    overflow: hidden;
+  }
+  details.card > summary {
+    list-style: none;
+    padding: 14px 16px;
+    font-weight: 600;
+    font-size: 0.98rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    -webkit-tap-highlight-color: transparent;
+  }
+  details.card > summary::-webkit-details-marker { display: none; }
+  details.card > summary .chev { color: var(--muted); transition: transform .15s ease; font-size: 0.8rem; }
+  details.card[open] > summary .chev { transform: rotate(90deg); }
+  .card-body { padding: 4px 16px 16px; }
+
+  .field { margin-bottom: 12px; }
+  .field label {
+    display: flex; justify-content: space-between; align-items: baseline;
+    font-size: 0.82rem; color: var(--muted); margin-bottom: 4px;
+  }
+  .field label .val { color: var(--text); font-weight: 600; font-variant-numeric: tabular-nums; }
+  input[type=number], input[type=text], input[type=date], select {
+    width: 100%;
+    font-size: 16px; /* prevents iOS auto-zoom */
+    padding: 10px 10px;
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    background: var(--input-bg);
+    color: var(--text);
+    -webkit-appearance: none;
+  }
+  input[type=range] { width: 100%; }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .row3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+  .checkfield { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+  .checkfield input { width: 20px; height: 20px; }
+  .checkfield label { font-size: 0.88rem; }
+  .helix-row { border: 1px dashed var(--border); border-radius: 8px; padding: 10px; margin-bottom: 8px; }
+  .helix-row .row2 { margin-top: 6px; }
+  .subtle { font-size: 0.78rem; color: var(--muted); margin: 2px 0 10px; line-height: 1.4; }
+
+  .badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    font-size: 0.72rem; font-weight: 700; letter-spacing: .02em;
+    padding: 2px 8px; border-radius: 999px; text-transform: uppercase;
+  }
+  .badge.pass { background: var(--pass-bg); color: var(--pass); }
+  .badge.fail { background: var(--fail-bg); color: var(--fail); }
+  .badge.warn { background: var(--warn-bg); color: var(--warn); }
+
+  #results { margin-top: 16px; }
+  .overall-banner {
+    border-radius: 12px; padding: 14px 16px; font-weight: 700; margin-bottom: 12px;
+    display: flex; align-items: center; gap: 8px; font-size: 1.0rem;
+  }
+  .overall-banner.pass { background: var(--pass-bg); color: var(--pass); }
+  .overall-banner.fail { background: var(--fail-bg); color: var(--fail); }
+
+  .step {
+    background: var(--card); border: 1px solid var(--border); border-radius: 12px;
+    padding: 14px 16px; margin-bottom: 10px;
+  }
+  .step h3 {
+    margin: 0 0 8px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px; justify-content: space-between;
+  }
+  .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin: 6px 0; }
+  .metric { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; }
+  .metric .m-label { font-size: 0.7rem; color: var(--muted); text-transform: uppercase; letter-spacing: .03em; }
+  .metric .m-value { font-size: 1.05rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .step p.note { font-size: 0.8rem; color: var(--muted); margin: 6px 0 0; line-height: 1.4; }
+  .step ul { margin: 6px 0 0; padding-left: 18px; font-size: 0.82rem; color: var(--muted); }
+
+  .chart-wrap { margin-top: 10px; }
+  .chart-wrap svg { width: 100%; height: auto; display: block; }
+  .legend { display: flex; gap: 14px; font-size: 0.75rem; color: var(--muted); margin-top: 4px; flex-wrap: wrap; }
+  .legend span { display: inline-flex; align-items: center; gap: 4px; }
+  .legend i { width: 10px; height: 10px; border-radius: 2px; display: inline-block; }
+
+  .actionbar {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+    background: linear-gradient(to top, var(--bg) 60%, transparent);
+  }
+  .actionbar .inner { max-width: 720px; margin: 0 auto; }
+  button#recalc {
+    width: 100%; padding: 14px; border: none; border-radius: 12px;
+    background: var(--accent); color: white; font-size: 1rem; font-weight: 700;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25);
+  }
+  button#recalc:active { opacity: .85; }
+
+  footer.disclaimer {
+    font-size: 0.72rem; color: var(--muted); line-height: 1.5; margin: 18px 4px 6px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Helical pile design -- lighting poles</h1>
+    <p>Mobile calculator for <code>helical_pile_design</code>. Inputs default to the 12&nbsp;m / medium-stiff-clay
+       worked example. Recalculates automatically as you change values.</p>
+  </header>
+
+  <form id="inputs" autocomplete="off">
+
+    <details class="card">
+      <summary>Project info <span class="chev">&#9656;</span></summary>
+      <div class="card-body">
+        <div class="field"><label>Project name</label><input type="text" id="project_name" placeholder=""></div>
+        <div class="field"><label>Location / pole ID</label><input type="text" id="project_location" placeholder=""></div>
+        <div class="field"><label>Engineer</label><input type="text" id="engineer_name" placeholder=""></div>
+        <div class="field"><label>Date</label><input type="date" id="calc_date"></div>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary>Pole &amp; luminaire (A1-A5) <span class="chev">&#9656;</span></summary>
+      <div class="card-body">
+        <div class="field"><label>Pole height, h (m) <span class="val" data-for="h"></span></label>
+          <input type="range" id="h" min="4" max="20" step="0.5" value="12.0"></div>
+        <div class="row2">
+          <div class="field"><label>Base diameter (m)</label><input type="number" id="b_base" min="0.10" max="0.60" step="0.01" value="0.25"></div>
+          <div class="field"><label>Top diameter (m)</label><input type="number" id="b_top" min="0.05" max="0.30" step="0.01" value="0.10"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Pole projected area (m&sup2;)</label><input type="number" id="A_pole" min="0.5" max="5" step="0.05" value="2.10"></div>
+          <div class="field"><label>Pole + arm weight (kN)</label><input type="number" id="W_pole" min="0.2" max="5" step="0.05" value="1.50"></div>
+        </div>
+        <div class="field"><label>Pole Cd <span class="val" data-for="Cd_pole"></span></label>
+          <input type="range" id="Cd_pole" min="0.30" max="0.70" step="0.01" value="0.50"></div>
+        <div class="row2">
+          <div class="field"><label>Luminaire EPA (m&sup2;)</label><input type="number" id="epa" min="0.05" max="2" step="0.05" value="0.50"></div>
+          <div class="field"><label>Luminaire + arm weight (kN)</label><input type="number" id="W_lum" min="0.05" max="1" step="0.01" value="0.25"></div>
+        </div>
+        <div class="field"><label>Luminaire arm eccentricity, e_arm (m)</label><input type="number" id="arm_ecc" min="0" max="4" step="0.1" value="0.0"></div>
+        <p class="subtle">e_arm = 0 for twin / centered arms. Nonzero for single-arm poles (drives the torsion-slip check).</p>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary>Wind (A6-A7) <span class="chev">&#9656;</span></summary>
+      <div class="card-body">
+        <div class="row2">
+          <div class="field"><label>Basic wind speed, V (m/s)</label><input type="number" id="V_ms" min="20" max="90" step="0.1" value="51.4"></div>
+          <div class="field"><label>Kd (directionality)</label><input type="number" id="Kd" min="0.80" max="1.00" step="0.01" value="0.95"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Kz at luminaire height</label><input type="number" id="Kz_top" min="0.5" max="2" step="0.01" value="1.04"></div>
+          <div class="field"><label>Kz at pole centroid</label><input type="number" id="Kz_centroid" min="0.5" max="2" step="0.01" value="1.00"></div>
+        </div>
+        <div class="field"><label>G (gust factor)</label><input type="number" id="G" min="1.00" max="1.30" step="0.01" value="1.14"></div>
+        <div class="field"><label>Service/strength pressure ratio <span class="val" data-for="service_ratio"></span></label>
+          <input type="range" id="service_ratio" min="0.2" max="0.7" step="0.01" value="0.44"></div>
+        <div class="field"><label>Pile reveal above grade (m)</label><input type="number" id="reveal" min="0" max="1" step="0.05" value="0.0"></div>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary>Soil / geotechnical (A8-A10) <span class="chev">&#9656;</span></summary>
+      <div class="card-body">
+        <div class="row2">
+          <div class="field"><label>Su, undrained shear str. (kPa)</label><input type="number" id="su" min="10" max="200" step="1" value="50"></div>
+          <div class="field"><label>Total unit wt, &gamma; (kN/m&sup3;)</label><input type="number" id="gamma" min="14" max="22" step="0.1" value="18.5"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>GWT depth (m)</label><input type="number" id="gwt" min="0" max="10" step="0.1" value="3.0"></div>
+          <div class="field"><label>Frost depth, d_f (m)</label><input type="number" id="d_f" min="0" max="3" step="0.1" value="1.2"></div>
+        </div>
+        <div class="checkfield"><input type="checkbox" id="eps50_manual"><label for="eps50_manual">Override eps50 manually</label></div>
+        <div class="field" id="eps50_field" style="display:none">
+          <label>eps50</label><input type="number" id="eps50" min="0.003" max="0.03" step="0.001" value="0.007">
+        </div>
+        <p class="subtle" id="eps50_auto_note">eps50 auto-derived from the Matlock Su band.</p>
+        <div class="checkfield"><input type="checkbox" id="py_lab_or_cpt"><label for="py_lab_or_cpt">p-y params from lab/CPT data (not SPT-only)</label></div>
+      </div>
+    </details>
+
+    <details class="card" open>
+      <summary>Trial pile geometry (Step 3) <span class="chev">&#9656;</span></summary>
+      <div class="card-body">
+        <div class="row2">
+          <div class="field"><label>Shaft OD (mm)</label>
+            <select id="d_shaft_mm">
+              <option value="168">168</option><option value="219">219</option>
+              <option value="273" selected>273</option><option value="324">324</option>
+            </select>
+          </div>
+          <div class="field"><label>Nominal wall thickness (mm)</label><input type="number" id="t_nominal_mm" min="5" max="20" step="0.1" value="9.3"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Fy (MPa)</label><input type="number" id="Fy_mpa" min="250" max="450" step="5" value="345"></div>
+          <div class="field"><label>Number of helices</label>
+            <select id="n_helix"><option value="2" selected>2</option><option value="3">3</option></select>
+          </div>
+        </div>
+        <div id="helix_rows"></div>
+        <div class="row2">
+          <div class="field"><label>Shaft standoff below bottom helix (m)</label><input type="number" id="standoff" min="0" max="1" step="0.05" value="0.15"></div>
+          <div class="field"><label>Shaft adhesion factor, &alpha;</label><input type="number" id="alpha_override" min="0.4" max="1.0" step="0.01" value="0.50"></div>
+        </div>
+        <div class="field"><label>Adfreeze bond stress, tau_ad (kPa)</label><input type="number" id="tau_ad" min="0" max="100" step="1" value="20"></div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary>Corrosion / design life (Step 7) <span class="chev">&#9656;</span></summary>
+      <div class="card-body">
+        <div class="row2">
+          <div class="field"><label>Design life (yr)</label><input type="number" id="design_life" min="25" max="100" step="5" value="75"></div>
+          <div class="field"><label>HDG thickness (&micro;m)</label><input type="number" id="t_zn_um" min="50" max="150" step="5" value="100"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Zinc corrosion rate (&micro;m/yr)</label><input type="number" id="r_zn" min="1" max="10" step="0.5" value="4.0"></div>
+          <div class="field"><label>Bare steel corrosion rate (&micro;m/yr)</label><input type="number" id="r_s" min="5" max="50" step="1" value="20"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Soil resistivity (ohm-cm)</label><input type="number" id="resistivity" min="200" max="20000" step="100" value="3000"></div>
+          <div class="field"><label>Soil pH</label><input type="number" id="ph" min="3" max="10" step="0.1" value="6.5"></div>
+        </div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary>Installation torque (Step 9) <span class="chev">&#9656;</span></summary>
+      <div class="card-body">
+        <div class="row2">
+          <div class="field"><label>Kt, torque factor (1/m)</label><input type="number" id="Kt" min="1" max="40" step="0.5" value="7.0"></div>
+          <div class="field"><label>Shaft/coupling torque rating (kN&middot;m)</label><input type="number" id="T_rated" min="1" max="50" step="0.5" value="15.0"></div>
+        </div>
+        <div class="checkfield"><input type="checkbox" id="Kt_established"><label for="Kt_established">Kt established by AC358 report</label></div>
+      </div>
+    </details>
+
+    <details class="card">
+      <summary>Pole-to-pile connection (Step 8) <span class="chev">&#9656;</span></summary>
+      <div class="card-body">
+        <div class="row2">
+          <div class="field"><label>Number of anchor bolts</label>
+            <select id="n_bolts"><option value="4" selected>4</option><option value="6">6</option><option value="8">8</option></select>
+          </div>
+          <div class="field"><label>Bolt circle radius (mm)</label><input type="number" id="bolt_circle_r_mm" min="50" max="400" step="5" value="175"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Bolt diameter, nominal (mm)</label><input type="number" id="bolt_diam_mm" min="12" max="50" step="1" value="25"></div>
+          <div class="field"><label>Bolt tensile stress area (mm&sup2;)</label><input type="number" id="Ab_mm2" min="50" max="2000" step="1" value="391"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Bolt Fu (MPa)</label><input type="number" id="Fu_bolt_mpa" min="300" max="900" step="1" value="517"></div>
+          <div class="field"><label>Leveling-nut standoff (mm)</label><input type="number" id="standoff_mm" min="0" max="150" step="1" value="15"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label>Fillet weld size (mm)</label><input type="number" id="fillet_mm" min="4" max="20" step="1" value="8"></div>
+          <div class="field"><label>Torsional slip capacity (kN&middot;m)</label><input type="number" id="T_slip_kNm" min="0" max="200" step="1" value="30"></div>
+        </div>
+        <p class="subtle">Torsional slip capacity is an ASSUMED value -- validate against product data.</p>
+      </div>
+    </details>
+  </form>
+
+  <section id="results"></section>
+
+  <footer class="disclaimer">
+    This tool wraps the same <code>helical_pile_design</code> calc logic as the desktop Streamlit app (loads &rarr;
+    geotech &rarr; sizing &rarr; axial &rarr; lateral p-y &rarr; structural &rarr; corrosion &rarr; torque &rarr;
+    connection &rarr; QA/QC), re-implemented in JavaScript and numerically cross-checked against the Python worked
+    example. Calc-package (.docx) and CAD (.dxf) export are desktop-app-only. Every result here should be
+    independently checked before use in a stamped submittal.
+  </footer>
+</div>
+
+<div class="actionbar"><div class="inner"><button id="recalc" type="button">Recalculate</button></div></div>
+
+<script>
+/* =========================================================================
+   Calc engine -- ported 1:1 from src/helical_pile_design/*.py
+   ========================================================================= */
+"use strict";
+
+const Loads = {
+  windPressureKpa(Kz, Kd, G, V_ms) {
+    const Pz_pa = 0.613 * Kz * Kd * G * V_ms ** 2;
+    return Pz_pa / 1000.0;
+  },
+  centroidHeightM(h, b_base, b_top) {
+    return (h / 3.0) * (b_base + 2.0 * b_top) / (b_base + b_top);
+  },
+  poleForceKN(Pz_centroid_kpa, Cd, A_pole_m2) {
+    return Pz_centroid_kpa * Cd * A_pole_m2;
+  },
+  luminaireForceKN(Pz_top_kpa, epa_m2) {
+    return Pz_top_kpa * epa_m2;
+  },
+  baseReactions(pole, lum, wind, reveal_m = 0.0, dead_load_factor = 1.0, wind_load_factor = 1.0) {
+    const z_bar = this.centroidHeightM(pole.height_m, pole.base_diam_m, pole.top_diam_m);
+    const Pz_centroid = this.windPressureKpa(wind.Kz_centroid, wind.Kd, wind.G, wind.V_ms);
+    const Pz_top = this.windPressureKpa(wind.Kz_top, wind.Kd, wind.G, wind.V_ms);
+    const F_pole = this.poleForceKN(Pz_centroid, pole.Cd, pole.projected_area_m2);
+    const F_lum = this.luminaireForceKN(Pz_top, lum.epa_m2);
+    const V = wind_load_factor * (F_pole + F_lum);
+    const M = wind_load_factor * (F_pole * z_bar + F_lum * pole.height_m) + V * reveal_m;
+    const P = dead_load_factor * (pole.weight_kN + lum.weight_kN);
+    const Tz = wind_load_factor * F_lum * lum.arm_eccentricity_m;
+    const e = V !== 0 ? M / V : Infinity;
+    return { V_kN: V, M_kNm: M, P_kN: P, e_m: e, Tz_kNm: Tz };
+  },
+  serviceWindEnvironment(strengthEnv) {
+    const scale = Math.sqrt(strengthEnv.service_pressure_ratio);
+    return {
+      V_ms: strengthEnv.V_ms * scale, Kz_top: strengthEnv.Kz_top, Kz_centroid: strengthEnv.Kz_centroid,
+      Kd: strengthEnv.Kd, G: strengthEnv.G, service_pressure_ratio: strengthEnv.service_pressure_ratio,
+    };
+  },
+};
+
+const Geotech = {
+  eps50FromSu(su_kpa) {
+    if (su_kpa < 25.0) return 0.020;
+    if (su_kpa <= 50.0) return 0.010;
+    return 0.007;
+  },
+};
+
+const Sizing = {
+  STANDARD_SHAFT_OD_M: [0.168, 0.219, 0.273, 0.324],
+  makeHelixConfig(diameters_m, depths_m, shaft_standoff_below_bottom_helix_m = 0.0) {
+    const top_depth_m = Math.min(...depths_m);
+    const bottom_helix_depth_m = Math.max(...depths_m);
+    return {
+      diameters_m, depths_m, shaft_standoff_below_bottom_helix_m, top_depth_m, bottom_helix_depth_m,
+      tip_depth_m: bottom_helix_depth_m + shaft_standoff_below_bottom_helix_m,
+      n_helices: diameters_m.length,
+    };
+  },
+  checkEmbedment(helix, d_shaft_m, d_f_m, L_embedded_m) {
+    const D_h_top = helix.diameters_m[helix.depths_m.indexOf(helix.top_depth_m)];
+    const frost_required = d_f_m + 3.0 * D_h_top;
+    const frost_ok = helix.top_depth_m >= frost_required;
+    const deep_required = 5.0 * D_h_top;
+    const deep_ok = helix.top_depth_m >= deep_required;
+    const lateral_note =
+      `L = ${L_embedded_m.toFixed(2)} m = ${(L_embedded_m / d_shaft_m).toFixed(1)} × D_shaft -- verify against ` +
+      `Broms/p-y required length in Step 5; typical short-rigid-pile range is L ≥ 10×D_shaft.`;
+    return {
+      frost_ok, frost_required_m: frost_required, deep_mode_ok: deep_ok, deep_mode_required_m: deep_required,
+      lateral_note, all_pass: frost_ok && deep_ok,
+    };
+  },
+};
+
+const FS_AXIAL = 2.0;
+const Axial = {
+  FS_AXIAL,
+  helixNetAreaM2(D_h_m, D_shaft_m) { return (Math.PI / 4.0) * (D_h_m ** 2 - D_shaft_m ** 2); },
+  adhesionFactor(su_kpa) {
+    if (su_kpa <= 25.0) return 1.0;
+    if (su_kpa >= 70.0) return 0.5;
+    return 1.0 + (su_kpa - 25.0) * (0.5 - 1.0) / (70.0 - 25.0);
+  },
+  individualBearingCompressionKN(helix_diams_m, D_shaft_m, su_kpa, L_eff_m, Nc = 9.0, alpha_override = null) {
+    const helix_term = helix_diams_m.reduce((s, dh) => s + this.helixNetAreaM2(dh, D_shaft_m) * Nc * su_kpa, 0);
+    const alpha = alpha_override !== null && alpha_override !== undefined ? alpha_override : this.adhesionFactor(su_kpa);
+    return helix_term + alpha * su_kpa * Math.PI * D_shaft_m * L_eff_m;
+  },
+  individualBearingTensionKN(helix_diams_m, D_shaft_m, su_kpa, L_eff_m, Nc = 9.0, include_shaft_adhesion = false) {
+    const helix_term = helix_diams_m.reduce((s, dh) => s + this.helixNetAreaM2(dh, D_shaft_m) * Nc * su_kpa, 0);
+    if (!include_shaft_adhesion) return helix_term;
+    const alpha = this.adhesionFactor(su_kpa);
+    return helix_term + alpha * su_kpa * Math.PI * D_shaft_m * L_eff_m;
+  },
+  cylindricalShearCompressionKN(D_h_bottom_m, D_shaft_m, su_kpa, D_h_avg_m, L_c_m, L_eff_m, Nc = 9.0) {
+    const bottom_bearing = this.helixNetAreaM2(D_h_bottom_m, D_shaft_m) * Nc * su_kpa;
+    const cylinder_shear = su_kpa * Math.PI * D_h_avg_m * L_c_m;
+    const alpha = this.adhesionFactor(su_kpa);
+    return bottom_bearing + cylinder_shear + alpha * su_kpa * Math.PI * D_shaft_m * L_eff_m;
+  },
+  frostUpliftDemandKN(tau_ad_kpa, D_shaft_m, d_f_m) { return tau_ad_kpa * Math.PI * D_shaft_m * d_f_m; },
+  checkCompression(Qu_individual_kN, Qu_cylindrical_kN, P_max_kN, FS = FS_AXIAL) {
+    const governing = Math.min(Qu_individual_kN, Qu_cylindrical_kN);
+    const method = Qu_individual_kN <= Qu_cylindrical_kN ? "individual bearing" : "cylindrical shear";
+    const fs_actual = P_max_kN > 0 ? governing / P_max_kN : Infinity;
+    return { Qu_individual_kN, Qu_cylindrical_kN, Qu_governing_kN: governing, demand_kN: P_max_kN,
+      FS_actual: fs_actual, FS_required: FS, passes: fs_actual >= FS, governing_method: method };
+  },
+  checkTension(Tu_individual_kN, Tu_cylindrical_kN, T_frost_net_kN, FS = FS_AXIAL) {
+    const governing = Math.min(Tu_individual_kN, Tu_cylindrical_kN);
+    const method = Tu_individual_kN <= Tu_cylindrical_kN ? "individual bearing" : "cylindrical shear";
+    const fs_actual = T_frost_net_kN > 0 ? governing / T_frost_net_kN : Infinity;
+    return { Qu_individual_kN: Tu_individual_kN, Qu_cylindrical_kN: Tu_cylindrical_kN, Qu_governing_kN: governing,
+      demand_kN: T_frost_net_kN, FS_actual: fs_actual, FS_required: FS, passes: fs_actual >= FS, governing_method: method };
+  },
+};
+
+const FS_PUSHOVER = 2.0, SERVICE_Y_LIMIT_M = 0.012, SERVICE_THETA_LIMIT_DEG = 0.5;
+
+function pileSectionProps(D_m, t_m, E_kpa = 200e6) {
+  const d_i = D_m - 2 * t_m;
+  const I_m4 = (Math.PI / 64.0) * (D_m ** 4 - d_i ** 4);
+  return { D_m, t_m, E_kpa, I_m4, EI_kNm2: E_kpa * I_m4 };
+}
+function sigmaVEffKpa(z_m, soil) {
+  if (z_m <= soil.gwt_depth_m) return soil.gamma_kNm3 * z_m;
+  return soil.gamma_kNm3 * soil.gwt_depth_m + soil.gamma_sub_kNm3 * (z_m - soil.gwt_depth_m);
+}
+function matlockPu(z_m, D_shaft_m, soil) {
+  const Np = Math.min(3.0 + sigmaVEffKpa(z_m, soil) / soil.su_kpa + soil.J * z_m / D_shaft_m, 9.0);
+  return { pu: Np * soil.su_kpa * D_shaft_m, Np };
+}
+function matlockPOfY(z_m, y_m, D_shaft_m, soil) {
+  if (z_m <= soil.frost_depth_m) return 0.0;
+  const { pu } = matlockPu(z_m, D_shaft_m, soil);
+  const y50 = 2.5 * soil.eps50 * D_shaft_m;
+  const ay = Math.abs(y_m);
+  const p = ay >= 8 * y50 ? pu : 0.5 * pu * (ay / y50) ** (1.0 / 3.0);
+  return y_m >= 0 ? p : -p;
+}
+
+// Banded Gaussian elimination (no pivoting), half-bandwidth m. Dense n x n
+// storage, but loops restricted to the band -> O(n*m^2) per solve. Valid
+// because beam stiffness + nonnegative soil-spring diagonal terms is SPD
+// for any realistically supported (non-degenerate) embedment.
+function solveBanded(n, m, A, b) {
+  for (let k = 0; k < n - 1; k++) {
+    const piv = A[k * n + k];
+    if (!isFinite(piv) || Math.abs(piv) < 1e-300) return null;
+    const iMax = Math.min(n - 1, k + m);
+    for (let i = k + 1; i <= iMax; i++) {
+      const aik = A[i * n + k];
+      if (aik === 0) continue;
+      const factor = aik / piv;
+      const jMax = Math.min(n - 1, k + m);
+      for (let j = k; j <= jMax; j++) A[i * n + j] -= factor * A[k * n + j];
+      b[i] -= factor * b[k];
+    }
+  }
+  const x = new Float64Array(n);
+  for (let i = n - 1; i >= 0; i--) {
+    let s = b[i];
+    const jMax = Math.min(n - 1, i + m);
+    for (let j = i + 1; j <= jMax; j++) s -= A[i * n + j] * x[j];
+    const dii = A[i * n + i];
+    if (!isFinite(dii) || Math.abs(dii) < 1e-300) return null;
+    x[i] = s / dii;
+  }
+  return x;
+}
+
+function solvePy(V_kN, M_kNm, pile, soil, L_m, n_elements = 180, tol_m = 1e-9, max_iter = 800) {
+  const EI = pile.EI_kNm2;
+  const h = L_m / n_elements;
+  const nn = n_elements + 1;
+  const ndof = 2 * nn;
+  // Match numpy.linspace's exact float ordering (step computed once, then
+  // i*step): L*i/n_elements lands on different float bits at boundary
+  // nodes, which can flip the frost-depth "<=" cutoff in matlockPOfY.
+  const z = new Float64Array(nn);
+  for (let i = 0; i < nn; i++) z[i] = i * h;
+  z[nn - 1] = L_m;
+
+  const h2 = h * h;
+  const c = EI / (h * h * h);
+  const ke = [
+    [12 * c, 6 * h * c, -12 * c, 6 * h * c],
+    [6 * h * c, 4 * h2 * c, -6 * h * c, 2 * h2 * c],
+    [-12 * c, -6 * h * c, 12 * c, -6 * h * c],
+    [6 * h * c, 2 * h2 * c, -6 * h * c, 4 * h2 * c],
+  ];
+
+  const Abase = new Float64Array(ndof * ndof);
+  for (let e = 0; e < n_elements; e++) {
+    const idx = [2 * e, 2 * e + 1, 2 * e + 2, 2 * e + 3];
+    for (let a = 0; a < 4; a++) for (let bI = 0; bI < 4; bI++) Abase[idx[a] * ndof + idx[bI]] += ke[a][bI];
+  }
+
+  const F0 = V_kN, F1 = M_kNm;
+  const trib = new Float64Array(nn).fill(h);
+  trib[0] = h / 2.0; trib[nn - 1] = h / 2.0;
+
+  let y = new Float64Array(nn).fill(1e-5);
+  const m = 3;
+  const Awork = new Float64Array(ndof * ndof);
+  const b = new Float64Array(ndof);
+  let u = null, converged = false;
+
+  for (let iter = 0; iter < max_iter; iter++) {
+    Awork.set(Abase);
+    b.fill(0); b[0] = F0; b[1] = F1;
+    for (let i = 0; i < nn; i++) {
+      let yi = y[i];
+      if (Math.abs(yi) <= 1e-9) yi = 1e-9;
+      const p = matlockPOfY(z[i], yi, pile.D_m, soil);
+      const ks = Math.abs(p / yi) * trib[i];
+      Awork[(2 * i) * ndof + (2 * i)] += ks;
+    }
+    const sol = solveBanded(ndof, m, Awork, b);
+    if (sol === null) return null;
+    u = sol;
+    const y_new = new Float64Array(nn);
+    let delta = 0;
+    for (let i = 0; i < nn; i++) {
+      y_new[i] = u[2 * i];
+      const d = Math.abs(y_new[i] - y[i]);
+      if (d > delta) delta = d;
+    }
+    const y_next = new Float64Array(nn);
+    for (let i = 0; i < nn; i++) y_next[i] = 0.5 * y[i] + 0.5 * y_new[i];
+    y = y_next;
+    if (delta < tol_m) { converged = true; y = y_new; break; }
+  }
+  if (u === null) return null;
+
+  const theta = new Float64Array(nn);
+  for (let i = 0; i < nn; i++) theta[i] = u[2 * i + 1];
+
+  const M_node = new Float64Array(nn);
+  const cnt = new Float64Array(nn);
+  for (let e = 0; e < n_elements; e++) {
+    const idx = [2 * e, 2 * e + 1, 2 * e + 2, 2 * e + 3];
+    const ue = idx.map((k) => u[k]);
+    const fe = [0, 0, 0, 0];
+    for (let a = 0; a < 4; a++) { let s = 0; for (let bb = 0; bb < 4; bb++) s += ke[a][bb] * ue[bb]; fe[a] = s; }
+    M_node[e] += -fe[1]; cnt[e] += 1;
+    M_node[e + 1] += fe[3]; cnt[e + 1] += 1;
+  }
+  for (let i = 0; i < nn; i++) M_node[i] /= Math.max(cnt[i], 1);
+
+  const y_gl_mm = y[0] * 1000.0;
+  const theta_gl_deg = (theta[0] * 180) / Math.PI;
+  let M_max = 0, M_max_idx = 0;
+  for (let i = 0; i < nn; i++) if (Math.abs(M_node[i]) > Math.abs(M_max)) { M_max = M_node[i]; M_max_idx = i; }
+  return {
+    z_m: z, y_m: y, theta_rad: theta, M_kNm: M_node, converged,
+    y_gl_mm, theta_gl_deg, M_max_kNm: Math.abs(M_max), M_max_depth_m: z[M_max_idx],
+  };
+}
+
+function bromsUltimateClayKN(su_kpa, D_shaft_m, L_m, e_m, d_f_m, tol = 1e-6, max_iter = 200) {
+  const z0 = Math.max(1.5 * D_shaft_m, d_f_m);
+  const avail = L_m - z0;
+  if (avail <= 0) throw new Error("Embedded length does not clear the exclusion depth z0.");
+  function gOfHu(Hu) {
+    const f = Hu / (9.0 * su_kpa * D_shaft_m);
+    const Mmax = Hu * (e_m + z0 + 0.5 * f);
+    const g = Math.sqrt(Math.max(Mmax, 0.0) / (2.25 * su_kpa * D_shaft_m));
+    return f + g - avail;
+  }
+  let lo = 1e-6, hi = 1.0;
+  while (gOfHu(hi) < 0 && hi < 1e7) hi *= 2.0;
+  let mid = 0.5 * (lo + hi);
+  for (let i = 0; i < max_iter; i++) {
+    mid = 0.5 * (lo + hi);
+    const val = gOfHu(mid);
+    if (Math.abs(val) < tol) return mid;
+    if (val > 0) hi = mid; else lo = mid;
+  }
+  return 0.5 * (lo + hi);
+}
+
+function checkServiceability(solution, y_limit_m = SERVICE_Y_LIMIT_M, theta_limit_deg = SERVICE_THETA_LIMIT_DEG) {
+  const y_pass = Math.abs(solution.y_gl_mm) / 1000.0 <= y_limit_m;
+  const th_pass = Math.abs(solution.theta_gl_deg) <= theta_limit_deg;
+  return { solution, y_limit_m, theta_limit_deg, y_passes: y_pass, theta_passes: th_pass, passes: y_pass && th_pass };
+}
+
+function pushover(V_u_kN, M_u_kNm, pile, soil, L_m, lambdas = null, y_collapse_m = 0.20) {
+  if (lambdas === null) lambdas = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 9.5, 10.0, 10.5, 11.0, 12.0];
+  const points = [];
+  let lambda_ult = 0.0;
+  for (const lam of lambdas) {
+    const sol = solvePy(V_u_kN * lam, M_u_kNm * lam, pile, soil, L_m);
+    if (sol !== null && sol.converged && Math.abs(sol.y_gl_mm) / 1000.0 < y_collapse_m) {
+      points.push({ lam, solution: sol }); lambda_ult = lam;
+    } else { points.push({ lam, solution: null }); break; }
+  }
+  return { points, lambda_ult, passes(fs_required = FS_PUSHOVER) { return this.lambda_ult >= fs_required; } };
+}
+
+const PHI_B = 0.90, PHI_C = 0.90;
+const Structural = {
+  sectionProperties(D_m, t_c_m, Fy_kpa, E_kpa = 200e6) {
+    const d_i = D_m - 2 * t_c_m;
+    const S = (Math.PI / 32.0) * (D_m ** 4 - d_i ** 4) / D_m;
+    const Z = (D_m ** 3 - d_i ** 3) / 6.0;
+    const A = (Math.PI / 4.0) * (D_m ** 2 - d_i ** 2);
+    const lam = D_m / t_c_m;
+    const lam_limit = 0.07 * E_kpa / Fy_kpa;
+    return { D_m, t_c_m, S_m3: S, Z_m3: Z, A_m2: A, compact: lam <= lam_limit, slenderness_ratio: lam, slenderness_limit: lam_limit };
+  },
+  h1Interaction(Pr_kN, Mr_kNm, Fy_kpa, section, phi_c = PHI_C, phi_b = PHI_B) {
+    const Pc = phi_c * Fy_kpa * section.A_m2;
+    const Mc = phi_b * Fy_kpa * section.Z_m3;
+    const pr_pc = Pc > 0 ? Pr_kN / Pc : Infinity;
+    const mr_mc = Mc > 0 ? Mr_kNm / Mc : Infinity;
+    let ratio, eq;
+    if (pr_pc >= 0.2) { ratio = pr_pc + (8.0 / 9.0) * mr_mc; eq = "H1-1a"; }
+    else { ratio = pr_pc / 2.0 + mr_mc; eq = "H1-1b"; }
+    return { equation: eq, Pr_over_Pc: pr_pc, Mr_over_Mc: mr_mc, ratio, passes: ratio <= 1.0 };
+  },
+};
+
+const Corrosion = {
+  sacrificialThicknessMm(t_zn_um, r_zn_um_per_yr, r_s_um_per_yr, design_life_yr) {
+    const zinc_life_yr = t_zn_um / r_zn_um_per_yr;
+    const remaining_yr = Math.max(design_life_yr - zinc_life_yr, 0.0);
+    return { zinc_life_yr, t_sac_mm: (r_s_um_per_yr * remaining_yr) / 1000.0 };
+  },
+  corrodedWallMm(t_nominal_mm, t_sac_mm, both_faces = false) { return t_nominal_mm - t_sac_mm * (both_faces ? 2 : 1); },
+  classifyCorrosivity(resistivity_ohm_cm, ph, design_life_yr, ac358_baseline_yr = 50.0) {
+    if (resistivity_ohm_cm < 1000.0 || ph < 5.5)
+      return "severely corrosive -- cathodic protection or epoxy required; confirm helical piles are permitted per AC358 in this soil";
+    const passes_screen = resistivity_ohm_cm >= 2000.0 && ph >= 5.5 && ph <= 10.0;
+    if (passes_screen && design_life_yr <= ac358_baseline_yr) return "non-aggressive (screening basis)";
+    return "moderately corrosive design case -- explicit sacrificial-thickness calculation required (screen passes, but life exceeds AC358 baseline and/or life-safety-adjacent application)";
+  },
+  designCorrosion(t_nominal_mm, t_zn_um, r_zn_um_per_yr, r_s_um_per_yr, design_life_yr, resistivity_ohm_cm, ph, both_faces = false) {
+    const { zinc_life_yr, t_sac_mm } = this.sacrificialThicknessMm(t_zn_um, r_zn_um_per_yr, r_s_um_per_yr, design_life_yr);
+    const t_c = this.corrodedWallMm(t_nominal_mm, t_sac_mm, both_faces);
+    return { zinc_life_yr, t_sac_mm, t_corroded_mm: t_c, classification: this.classifyCorrosivity(resistivity_ohm_cm, ph, design_life_yr) };
+  },
+};
+
+const Torque = {
+  requiredUltimateAxialKN(P_compression_ult_kN, T_frost_ult_kN) { return Math.max(P_compression_ult_kN, T_frost_ult_kN); },
+  tMinKNm(P_req_ultimate_kN, Kt_per_m) { return P_req_ultimate_kN / Kt_per_m; },
+};
+
+const QAQC = {
+  evaluateLoadTestTriggers(inputs) {
+    const triggered_tests = new Set(); const reasons = [];
+    function add(test, reason) { triggered_tests.add(test); reasons.push(`${test}: ${reason}`); }
+    if (!inputs.kt_established_by_ac358) add("D1143/D3689", "Kt not established by AC358 report for this exact shaft/helix product");
+    if (inputs.frost_uplift_relies_on_assumed_values) add("D3689", "Frost-uplift design relies on assumed tau_ad or sleeve performance");
+    const lateral_margin_low = inputs.predicted_y_over_limit_ratio > 0.75;
+    if (lateral_margin_low || !inputs.py_params_from_lab_or_cpt) {
+      const reason = [];
+      if (lateral_margin_low) reason.push("lateral serviceability margin < 25%");
+      if (!inputs.py_params_from_lab_or_cpt) reason.push("p-y parameters assumed without lab/CPT data");
+      add("D3966", reason.join(" and "));
+    }
+    if (inputs.n_production_piles > 50 || inputs.variable_or_unfamiliar_soils)
+      add("D3689+D3966", "> 50 production piles, or unfamiliar/variable soils across site -- one pre-production test pile per soil regime");
+    return { triggered_tests, reasons };
+  },
+};
+
+const PHI_T_BOLT = 0.75, PHI_W_WELD = 0.75;
+const Connection = {
+  sumCiSquaredM2(n_bolts, bolt_circle_radius_m) {
+    let s = 0;
+    for (let i = 0; i < n_bolts; i++) { const a = (2 * Math.PI * i) / n_bolts; s += (bolt_circle_radius_m * Math.cos(a)) ** 2; }
+    return s;
+  },
+  boltTensionKN(M_kNm, bolts, P_uplift_kN = 0.0) {
+    const sum_ci2 = this.sumCiSquaredM2(bolts.n_bolts, bolts.bolt_circle_radius_m);
+    return (M_kNm * bolts.bolt_circle_radius_m) / sum_ci2 + P_uplift_kN / bolts.n_bolts;
+  },
+  boltBendingMomentKNm(V_kN, bolts, standoff_m) {
+    if (standoff_m <= bolts.bolt_diam_m) return 0.0;
+    return (V_kN / bolts.n_bolts) * standoff_m / 2.0;
+  },
+  boltSectionModulusM3(bolt_diam_m) { return (Math.PI * bolt_diam_m ** 3) / 32.0; },
+  boltCheck(M_kNm, bolts, P_uplift_kN = 0.0, bending_moment_kNm = 0.0, phi_t = PHI_T_BOLT) {
+    const T_bolt = this.boltTensionKN(M_kNm, bolts, P_uplift_kN);
+    const sigma_tension = T_bolt / bolts.Ab_m2;
+    const Z_bolt = this.boltSectionModulusM3(bolts.bolt_diam_m);
+    const sigma_bending = Z_bolt > 0 ? bending_moment_kNm / Z_bolt : 0.0;
+    const sigma_total = sigma_tension + sigma_bending;
+    const sigma_capacity = phi_t * 0.75 * bolts.Fu_kpa;
+    return { T_bolt_kN: T_bolt, T_capacity_kN: sigma_capacity * bolts.Ab_m2, sigma_tension_kpa: sigma_tension,
+      sigma_bending_kpa: sigma_bending, sigma_total_kpa: sigma_total, sigma_capacity_kpa: sigma_capacity,
+      passes: sigma_total <= sigma_capacity };
+  },
+  weldCheck(M_kNm, V_kN, D_shaft_m, fillet_size_m, FEXX_kpa = 490e3, phi_w = PHI_W_WELD) {
+    const r = D_shaft_m / 2.0;
+    const Sw = Math.PI * r ** 2;
+    const w_M = M_kNm / Sw;
+    const w_V = V_kN / (Math.PI * D_shaft_m);
+    const w_r = Math.sqrt(w_M ** 2 + w_V ** 2);
+    const capacity = phi_w * 0.6 * FEXX_kpa * 0.707 * fillet_size_m;
+    return { demand_kN_per_m: w_r, capacity_kN_per_m: capacity, passes: w_r <= capacity };
+  },
+  torsionSlipCheck(pile_torsional_capacity_kNm, Tz_kNm, factor = 3.0) { return pile_torsional_capacity_kNm >= factor * Tz_kNm; },
+};
+
+/* =========================================================================
+   UI wiring
+   ========================================================================= */
+
+const $ = (id) => document.getElementById(id);
+const fmt = (v, d = 2) => (isFinite(v) ? v.toFixed(d) : "∞");
+
+function badge(pass, textPass = "Pass", textFail = "Fail") {
+  return `<span class="badge ${pass ? "pass" : "fail"}">${pass ? textPass : textFail}</span>`;
+}
+
+// ---- helix rows (dynamic, 2 or 3) ----
+function renderHelixRows() {
+  const n = parseInt($("n_helix").value, 10);
+  const container = $("helix_rows");
+  const existing = [];
+  for (let i = 0; i < 3; i++) {
+    const d = $(`hd${i}`), z = $(`hz${i}`);
+    existing.push({ d: d ? parseFloat(d.value) : 450, z: z ? parseFloat(z.value) : 3.0 + i * 1.35 });
+  }
+  let html = "";
+  for (let i = 0; i < n; i++) {
+    html += `<div class="helix-row"><strong style="font-size:0.82rem">Helix ${i + 1}</strong>
+      <div class="row2">
+        <div class="field"><label>Diameter (mm)</label><input type="number" id="hd${i}" min="250" max="600" step="10" value="${existing[i].d}"></div>
+        <div class="field"><label>Depth (m)</label><input type="number" id="hz${i}" min="0.5" max="10" step="0.05" value="${existing[i].z}"></div>
+      </div></div>`;
+  }
+  container.innerHTML = html;
+}
+
+function readInputs() {
+  const n_helix = parseInt($("n_helix").value, 10);
+  const helix_diam_mm = [], helix_depth_m = [];
+  for (let i = 0; i < n_helix; i++) {
+    helix_diam_mm.push(parseFloat($(`hd${i}`).value));
+    helix_depth_m.push(parseFloat($(`hz${i}`).value));
+  }
+  const su = parseFloat($("su").value);
+  const eps50_manual = $("eps50_manual").checked;
+  const eps50 = eps50_manual ? parseFloat($("eps50").value) : Geotech.eps50FromSu(su);
+  return {
+    h: parseFloat($("h").value), b_base: parseFloat($("b_base").value), b_top: parseFloat($("b_top").value),
+    A_pole: parseFloat($("A_pole").value), W_pole: parseFloat($("W_pole").value), Cd_pole: parseFloat($("Cd_pole").value),
+    epa: parseFloat($("epa").value), W_lum: parseFloat($("W_lum").value), arm_ecc: parseFloat($("arm_ecc").value),
+    V_ms: parseFloat($("V_ms").value), Kz_top: parseFloat($("Kz_top").value), Kz_centroid: parseFloat($("Kz_centroid").value),
+    Kd: parseFloat($("Kd").value), G: parseFloat($("G").value), service_ratio: parseFloat($("service_ratio").value),
+    reveal: parseFloat($("reveal").value),
+    su, gamma: parseFloat($("gamma").value), gwt: parseFloat($("gwt").value), d_f: parseFloat($("d_f").value),
+    eps50_manual, eps50, py_lab_or_cpt: $("py_lab_or_cpt").checked,
+    d_shaft_mm: parseFloat($("d_shaft_mm").value), t_nominal_mm: parseFloat($("t_nominal_mm").value),
+    Fy_mpa: parseFloat($("Fy_mpa").value), n_helix, helix_diam_mm, helix_depth_m,
+    standoff: parseFloat($("standoff").value), alpha_override: parseFloat($("alpha_override").value),
+    tau_ad: parseFloat($("tau_ad").value),
+    design_life: parseFloat($("design_life").value), t_zn_um: parseFloat($("t_zn_um").value),
+    r_zn: parseFloat($("r_zn").value), r_s: parseFloat($("r_s").value), resistivity: parseFloat($("resistivity").value),
+    ph: parseFloat($("ph").value),
+    Kt: parseFloat($("Kt").value), Kt_established: $("Kt_established").checked, T_rated: parseFloat($("T_rated").value),
+    n_bolts: parseInt($("n_bolts").value, 10), bolt_circle_r_mm: parseFloat($("bolt_circle_r_mm").value),
+    bolt_diam_mm: parseFloat($("bolt_diam_mm").value), Ab_mm2: parseFloat($("Ab_mm2").value),
+    Fu_bolt_mpa: parseFloat($("Fu_bolt_mpa").value), standoff_mm: parseFloat($("standoff_mm").value),
+    fillet_mm: parseFloat($("fillet_mm").value), T_slip_kNm: parseFloat($("T_slip_kNm").value),
+  };
+}
+
+function runCalc(inp) {
+  const D_SHAFT = inp.d_shaft_mm / 1000.0;
+  const pole = { height_m: inp.h, base_diam_m: inp.b_base, top_diam_m: inp.b_top, projected_area_m2: inp.A_pole,
+    weight_kN: inp.W_pole, Cd: inp.Cd_pole };
+  const lum = { epa_m2: inp.epa, weight_kN: inp.W_lum, arm_eccentricity_m: inp.arm_ecc };
+  const wind_strength = { V_ms: inp.V_ms, Kz_top: inp.Kz_top, Kz_centroid: inp.Kz_centroid, Kd: inp.Kd, G: inp.G,
+    service_pressure_ratio: inp.service_ratio };
+  const wind_service = Loads.serviceWindEnvironment(wind_strength);
+
+  const strength = Loads.baseReactions(pole, lum, wind_strength, inp.reveal, 1.25);
+  const service = Loads.baseReactions(pole, lum, wind_service, inp.reveal, 1.0);
+
+  const helix = Sizing.makeHelixConfig(inp.helix_diam_mm.map((d) => d / 1000.0), inp.helix_depth_m, inp.standoff);
+  const L_pile = helix.tip_depth_m;
+  const embed = Sizing.checkEmbedment(helix, D_SHAFT, inp.d_f, L_pile);
+
+  const corr = Corrosion.designCorrosion(inp.t_nominal_mm, inp.t_zn_um, inp.r_zn, inp.r_s, inp.design_life, inp.resistivity, inp.ph);
+  const t_c_mm = corr.t_corroded_mm;
+
+  const L_eff = Math.max(helix.top_depth_m - inp.d_f, 0.0);
+  const Qu_comp = Axial.individualBearingCompressionKN(helix.diameters_m, D_SHAFT, inp.su, L_eff, 9.0, inp.alpha_override);
+  const D_h_bottom = helix.diameters_m[helix.depths_m.indexOf(helix.bottom_helix_depth_m)];
+  const D_h_avg = helix.diameters_m.reduce((a, b) => a + b, 0) / helix.diameters_m.length;
+  const L_c = helix.bottom_helix_depth_m - helix.top_depth_m;
+  const Qu_cyl = Axial.cylindricalShearCompressionKN(D_h_bottom, D_SHAFT, inp.su, D_h_avg, L_c, L_eff);
+  const comp_check = Axial.checkCompression(Qu_comp, Qu_cyl, strength.P_kN);
+
+  const T_frost = Axial.frostUpliftDemandKN(inp.tau_ad, D_SHAFT, inp.d_f);
+  const Tu = Axial.individualBearingTensionKN(helix.diameters_m, D_SHAFT, inp.su, 0.0);
+  const tens_check = Axial.checkTension(Tu, Tu * 1.3, T_frost);
+
+  const Fy_kpa = inp.Fy_mpa * 1000.0;
+  const pile_section = pileSectionProps(D_SHAFT, t_c_mm / 1000.0);
+  const soil = { su_kpa: inp.su, gamma_kNm3: inp.gamma, gamma_sub_kNm3: inp.gamma - 9.81, gwt_depth_m: inp.gwt,
+    eps50: inp.eps50, frost_depth_m: inp.d_f, J: 0.5 };
+
+  const Hu = bromsUltimateClayKN(inp.su, D_SHAFT, L_pile, strength.e_m, inp.d_f);
+  const sol_service = solvePy(service.V_kN, -service.M_kNm, pile_section, soil, L_pile);
+  const sol_strength = solvePy(strength.V_kN, -strength.M_kNm, pile_section, soil, L_pile);
+  const svc_check = sol_service ? checkServiceability(sol_service) : null;
+  const po = pushover(strength.V_kN, -strength.M_kNm, pile_section, soil, L_pile);
+
+  const section = Structural.sectionProperties(D_SHAFT, t_c_mm / 1000.0, Fy_kpa);
+  const h1 = Structural.h1Interaction(strength.P_kN, sol_strength ? sol_strength.M_max_kNm : 0.0, Fy_kpa, section);
+
+  const P_req = Torque.requiredUltimateAxialKN(2.0 * strength.P_kN, 2.0 * T_frost);
+  const T_min = Torque.tMinKNm(P_req, inp.Kt);
+
+  const bolts = { n_bolts: inp.n_bolts, bolt_circle_radius_m: inp.bolt_circle_r_mm / 1000.0, Ab_m2: inp.Ab_mm2 / 1e6,
+    Fu_kpa: inp.Fu_bolt_mpa * 1000.0, bolt_diam_m: inp.bolt_diam_mm / 1000.0 };
+  const bolt_bending_M = Connection.boltBendingMomentKNm(strength.V_kN, bolts, inp.standoff_mm / 1000.0);
+  const bolt_res = Connection.boltCheck(strength.M_kNm, bolts, 0.0, bolt_bending_M);
+  const weld_res = Connection.weldCheck(strength.M_kNm, strength.V_kN, D_SHAFT, inp.fillet_mm / 1000.0);
+  const torsion_ok = Connection.torsionSlipCheck(inp.T_slip_kNm, strength.Tz_kNm);
+
+  const trig_inputs = {
+    kt_established_by_ac358: inp.Kt_established, frost_uplift_relies_on_assumed_values: true,
+    py_params_from_lab_or_cpt: inp.py_lab_or_cpt,
+    predicted_y_over_limit_ratio: sol_service ? Math.abs(sol_service.y_gl_mm) / 1000.0 / svc_check.y_limit_m : 1.0,
+    n_production_piles: 1, variable_or_unfamiliar_soils: false,
+  };
+  const triggers = QAQC.evaluateLoadTestTriggers(trig_inputs);
+
+  const overall_pass = embed.all_pass && comp_check.passes && tens_check.passes && (svc_check ? svc_check.passes : false)
+    && po.passes() && h1.passes && bolt_res.passes && weld_res.passes && torsion_ok;
+
+  return { D_SHAFT, strength, service, helix, L_pile, embed, corr, t_c_mm, Qu_comp, Qu_cyl, comp_check,
+    T_frost, Tu, tens_check, pile_section, soil, Hu, sol_service, sol_strength, svc_check, po, section, h1,
+    P_req, T_min, bolts, bolt_bending_M, bolt_res, weld_res, torsion_ok, triggers, overall_pass };
+}
+
+/* ---- SVG charts (no external deps) ---- */
+function svgChart(series, opts) {
+  const W = 340, H = 220, ML = 42, MR = 12, MT = 10, MB = 24;
+  const plotW = W - ML - MR, plotH = H - MT - MB;
+  let xs = [], ys = [];
+  series.forEach((s) => s.pts.forEach((p) => { xs.push(p.x); ys.push(p.y); }));
+  if (opts.xZero) xs.push(0);
+  let xMin = Math.min(...xs), xMax = Math.max(...xs);
+  let yMin = Math.min(...ys), yMax = Math.max(...ys);
+  if (xMin === xMax) { xMin -= 1; xMax += 1; }
+  if (yMin === yMax) { yMin -= 1; yMax += 1; }
+  const xPad = (xMax - xMin) * 0.08, yPad = (yMax - yMin) * 0.08;
+  xMin -= xPad; xMax += xPad; yMin -= yPad; yMax += yPad;
+  const sx = (x) => ML + ((x - xMin) / (xMax - xMin)) * plotW;
+  const sy = (y) => MT + (1 - (y - yMin) / (yMax - yMin)) * plotH;
+
+  let s = `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" font-family="inherit">`;
+  s += `<rect x="0" y="0" width="${W}" height="${H}" fill="none"/>`;
+  // gridlines + axis labels (4 ticks each)
+  for (let i = 0; i <= 4; i++) {
+    const xv = xMin + (i / 4) * (xMax - xMin);
+    const px = sx(xv);
+    s += `<line x1="${px}" y1="${MT}" x2="${px}" y2="${MT + plotH}" stroke="currentColor" stroke-opacity="0.08"/>`;
+    s += `<text x="${px}" y="${H - 6}" font-size="8" text-anchor="middle" fill="currentColor" opacity="0.6">${xv.toFixed(opts.xDec ?? 1)}</text>`;
+    const yv = yMin + (i / 4) * (yMax - yMin);
+    const py = sy(yv);
+    s += `<line x1="${ML}" y1="${py}" x2="${ML + plotW}" y2="${py}" stroke="currentColor" stroke-opacity="0.08"/>`;
+    s += `<text x="${ML - 4}" y="${py + 3}" font-size="8" text-anchor="end" fill="currentColor" opacity="0.6">${yv.toFixed(opts.yDec ?? 1)}</text>`;
+  }
+  // zero lines
+  if (xMin < 0 && xMax > 0) s += `<line x1="${sx(0)}" y1="${MT}" x2="${sx(0)}" y2="${MT + plotH}" stroke="currentColor" stroke-opacity="0.35"/>`;
+  if (yMin < 0 && yMax > 0) s += `<line x1="${ML}" y1="${sy(0)}" x2="${ML + plotW}" y2="${sy(0)}" stroke="currentColor" stroke-opacity="0.35"/>`;
+
+  series.forEach((ser) => {
+    const pts = ser.pts.map((p) => `${sx(p.x).toFixed(1)},${sy(p.y).toFixed(1)}`).join(" ");
+    s += `<polyline points="${pts}" fill="none" stroke="${ser.color}" stroke-width="2"/>`;
+    if (ser.marker) ser.pts.forEach((p) => { s += `<circle cx="${sx(p.x).toFixed(1)}" cy="${sy(p.y).toFixed(1)}" r="2.2" fill="${ser.color}"/>`; });
+  });
+  s += `<text x="${ML + plotW / 2}" y="${H - -2 + 14}" font-size="0"></text>`;
+  s += `</svg>`;
+  return s;
+}
+
+function chartBlock(title, series, opts) {
+  const legend = series.map((s) => `<span><i style="background:${s.color}"></i>${s.label}</span>`).join("");
+  return `<div class="chart-wrap"><div style="font-size:0.78rem;color:var(--muted);margin-bottom:4px">${title}</div>
+    ${svgChart(series, opts)}<div class="legend">${legend}</div></div>`;
+}
+
+function render(r, inp) {
+  const parts = [];
+  parts.push(`<div class="overall-banner ${r.overall_pass ? "pass" : "fail"}">
+    ${r.overall_pass ? "✓ Overall: all implemented checks PASS" : "⚠ Overall: one or more checks FAIL"}
+  </div>`);
+
+  // Step 1
+  parts.push(`<div class="step"><h3>Step 1 &mdash; Loads</h3>
+    <div class="metrics">
+      <div class="metric"><div class="m-label">V_u</div><div class="m-value">${fmt(r.strength.V_kN)} kN</div></div>
+      <div class="metric"><div class="m-label">M_u</div><div class="m-value">${fmt(r.strength.M_kNm)} kN&middot;m</div></div>
+      <div class="metric"><div class="m-label">P_u</div><div class="m-value">${fmt(r.strength.P_kN)} kN</div></div>
+      <div class="metric"><div class="m-label">e = M/V</div><div class="m-value">${fmt(r.strength.e_m)} m</div></div>
+    </div>
+    <p class="note">Service: V_s=${fmt(r.service.V_kN)} kN, M_s=${fmt(r.service.M_kNm)} kN&middot;m</p>
+  </div>`);
+
+  // Step 2
+  const su_band = inp.su < 25 ? "soft (Su &lt; 25 kPa)" : inp.su <= 50 ? "medium (25&ndash;50 kPa)" : "stiff (Su &gt; 50 kPa)";
+  parts.push(`<div class="step"><h3>Step 2 &mdash; Geotechnical parameterization</h3>
+    <div class="metrics">
+      <div class="metric"><div class="m-label">Su</div><div class="m-value">${fmt(inp.su, 1)} kPa</div></div>
+      <div class="metric"><div class="m-label">eps50</div><div class="m-value">${inp.eps50}</div></div>
+    </div>
+    <p class="note">${inp.eps50_manual ? "eps50 manually overridden." : "eps50 from Matlock Su band &mdash; classified " + su_band + "."}
+      p-y basis: ${inp.py_lab_or_cpt ? "lab/CPT data." : "SPT correlation only &mdash; triggers a Step 10 load-test recommendation."}</p>
+  </div>`);
+
+  // Step 3
+  parts.push(`<div class="step"><h3>Step 3 &mdash; Sizing &amp; embedment ${badge(r.embed.all_pass)}</h3>
+    <p class="note">Trial shaft ${inp.d_shaft_mm} mm OD, pile tip depth ${fmt(r.L_pile)} m.
+    Frost req ${fmt(r.embed.frost_required_m)} m, deep-mode req ${fmt(r.embed.deep_mode_required_m)} m.</p>
+    <p class="note">${r.embed.lateral_note}</p>
+  </div>`);
+
+  // Step 4
+  parts.push(`<div class="step"><h3>Step 4 &mdash; Axial capacity ${badge(r.comp_check.passes && r.tens_check.passes)}</h3>
+    <div class="metrics">
+      <div class="metric"><div class="m-label">Compression FS</div><div class="m-value">${fmt(r.comp_check.FS_actual, 1)} ${badge(r.comp_check.passes)}</div></div>
+      <div class="metric"><div class="m-label">Tension FS (frost)</div><div class="m-value">${fmt(r.tens_check.FS_actual, 1)} ${badge(r.tens_check.passes)}</div></div>
+    </div>
+    <p class="note">Compression governed by ${r.comp_check.governing_method} (Qu,individual=${fmt(r.Qu_comp, 1)} kN, Qu,cylindrical=${fmt(r.Qu_cyl, 1)} kN)</p>
+  </div>`);
+
+  // Step 5
+  const svcPass = r.svc_check ? r.svc_check.passes : false;
+  let step5 = `<div class="step"><h3>Step 5 &mdash; Lateral / moment (governing) ${badge(r.po.passes() && svcPass)}</h3>
+    <div class="metrics">
+      <div class="metric"><div class="m-label">Broms Hu</div><div class="m-value">${fmt(r.Hu, 1)} kN</div></div>
+      <div class="metric"><div class="m-label">Pushover &lambda;_ult</div><div class="m-value">${fmt(r.po.lambda_ult, 1)} ${badge(r.po.passes())}</div></div>`;
+  if (r.sol_service) {
+    step5 += `<div class="metric"><div class="m-label">Service y_gl</div><div class="m-value">${fmt(r.sol_service.y_gl_mm, 2)} mm ${badge(r.svc_check.passes)}</div></div>`;
+  }
+  step5 += `</div>`;
+  if (r.sol_service && r.sol_strength) {
+    const yseries = [
+      { label: "Service", color: "#2563eb", pts: Array.from(r.sol_service.y_m).map((v, i) => ({ x: v * 1000, y: -r.sol_service.z_m[i] })) },
+      { label: "Strength", color: "#dc2626", pts: Array.from(r.sol_strength.y_m).map((v, i) => ({ x: v * 1000, y: -r.sol_strength.z_m[i] })) },
+    ];
+    const mseries = [
+      { label: "Service", color: "#2563eb", pts: Array.from(r.sol_service.M_kNm).map((v, i) => ({ x: v, y: -r.sol_service.z_m[i] })) },
+      { label: "Strength", color: "#dc2626", pts: Array.from(r.sol_strength.M_kNm).map((v, i) => ({ x: v, y: -r.sol_strength.z_m[i] })) },
+    ];
+    step5 += chartBlock("Deflected shape -- y (mm) vs. depth (m)", yseries, { xZero: true, xDec: 1, yDec: 1 });
+    step5 += chartBlock("Bending moment -- M (kN&middot;m) vs. depth (m)", mseries, { xZero: true, xDec: 0, yDec: 1 });
+    step5 += `<p class="note">Strength case: M_max=${fmt(r.sol_strength.M_max_kNm, 1)} kN&middot;m @ z=${fmt(r.sol_strength.M_max_depth_m, 2)} m</p>`;
+  }
+  const povPts = r.po.points.filter((p) => p.solution).map((p) => ({ x: p.solution.y_gl_mm, y: p.lam }));
+  if (povPts.length) {
+    step5 += chartBlock("Pushover -- head deflection (mm) vs. load multiplier &lambda;", [{ label: "λ vs y_gl", color: "#059669", pts: povPts, marker: true }], { xZero: false, xDec: 0, yDec: 1 });
+  }
+  step5 += `</div>`;
+  parts.push(step5);
+
+  // Step 6
+  parts.push(`<div class="step"><h3>Step 6 &mdash; Structural (AISC 360, corroded) ${badge(r.h1.passes)}</h3>
+    <p class="note">t_corroded=${fmt(r.t_c_mm, 2)} mm, compact section=${r.section.compact}</p>
+    <div class="metrics"><div class="metric"><div class="m-label">H1 ratio (${r.h1.equation})</div><div class="m-value">${fmt(r.h1.ratio, 3)}</div></div></div>
+  </div>`);
+
+  // Step 7
+  parts.push(`<div class="step"><h3>Step 7 &mdash; Corrosion</h3>
+    <p class="note">Zinc life ${fmt(r.corr.zinc_life_yr, 0)} yr, sacrificial thickness ${fmt(r.corr.t_sac_mm, 2)} mm</p>
+    <p class="note">${r.corr.classification}</p>
+  </div>`);
+
+  // Step 8
+  parts.push(`<div class="step"><h3>Step 8 &mdash; Pole-to-pile connection ${badge(r.bolt_res.passes && r.weld_res.passes && r.torsion_ok)}</h3>
+    <div class="metrics">
+      <div class="metric"><div class="m-label">Bolt tension</div><div class="m-value">${fmt(r.bolt_res.T_bolt_kN, 1)} kN</div></div>
+      <div class="metric"><div class="m-label">Bolt stress</div><div class="m-value">${fmt(r.bolt_res.sigma_total_kpa / 1000, 0)} MPa ${badge(r.bolt_res.passes)}</div></div>
+      <div class="metric"><div class="m-label">Weld demand</div><div class="m-value">${fmt(r.weld_res.demand_kN_per_m, 1)} kN/m ${badge(r.weld_res.passes)}</div></div>
+      <div class="metric"><div class="m-label">Torsion demand</div><div class="m-value">${fmt(r.strength.Tz_kNm, 2)} kN&middot;m ${badge(r.torsion_ok)}</div></div>
+    </div>
+  </div>`);
+
+  // Step 9
+  parts.push(`<div class="step"><h3>Step 9 &mdash; Installation torque</h3>
+    <p class="note">Required ultimate axial ${fmt(r.P_req, 1)} kN, Kt=${inp.Kt} 1/m, T_min=${fmt(r.T_min, 2)} kN&middot;m</p>
+    ${!inp.Kt_established ? '<p class="note">Kt not established by an AC358 report -- treat as assumed until validated.</p>' : ""}
+  </div>`);
+
+  // Step 10
+  const trigList = [...r.triggers.triggered_tests].sort();
+  parts.push(`<div class="step"><h3>Step 10 &mdash; QA/QC triggers ${trigList.length ? badge(false, "", "Flagged") : badge(true, "None")}</h3>
+    ${trigList.length ? `<p class="note">Load tests triggered: ${trigList.join(", ")}</p><ul>${r.triggers.reasons.map((x) => `<li>${x}</li>`).join("")}</ul>` : '<p class="note">No load test triggers hit.</p>'}
+  </div>`);
+
+  $("results").innerHTML = parts.join("");
+}
+
+let debounceTimer = null;
+function scheduleRecalc() {
+  clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(recalc, 120);
+}
+
+function recalc() {
+  try {
+    const inp = readInputs();
+    const r = runCalc(inp);
+    render(r, inp);
+  } catch (err) {
+    $("results").innerHTML = `<div class="step" style="border-color:var(--fail)"><h3>Calculation error</h3>
+      <p class="note">${(err && err.message) || err}</p></div>`;
+  }
+}
+
+// range value labels
+function wireRangeLabels() {
+  document.querySelectorAll('input[type=range]').forEach((el) => {
+    const label = document.querySelector(`.val[data-for="${el.id}"]`);
+    const update = () => { if (label) label.textContent = el.value; };
+    el.addEventListener("input", update);
+    update();
+  });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+  renderHelixRows();
+  wireRangeLabels();
+
+  $("n_helix").addEventListener("change", () => { renderHelixRows(); scheduleRecalc(); });
+  $("eps50_manual").addEventListener("change", () => {
+    const on = $("eps50_manual").checked;
+    $("eps50_field").style.display = on ? "" : "none";
+    $("eps50_auto_note").style.display = on ? "none" : "";
+    scheduleRecalc();
+  });
+
+  document.getElementById("inputs").addEventListener("input", scheduleRecalc);
+  document.getElementById("inputs").addEventListener("change", scheduleRecalc);
+  $("recalc").addEventListener("click", recalc);
+
+  const dateEl = $("calc_date");
+  if (dateEl) dateEl.value = new Date().toISOString().slice(0, 10);
+
+  recalc();
+});
+</script>
+</body>
+</html>
