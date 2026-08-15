@@ -64,7 +64,7 @@ package works after installing it.
 
 ```bash
 pip install -e ".[app]"
-streamlit run app/streamlit_app.py
+python -m streamlit run app/streamlit_app.py
 ```
 
 Opens in your browser (default `http://localhost:8501`). Every input in
