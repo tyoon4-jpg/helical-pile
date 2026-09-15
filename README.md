@@ -81,6 +81,29 @@ as static images -- auto-filled from whatever is currently in the
 sidebar. Like the rest of the app, it duplicates no calculation logic,
 only formats already-computed results into a document.
 
+## Mobile app
+
+`app/mobile.html` is a self-contained, phone-friendly calculator -- open it
+in any mobile browser, no install or server required:
+
+https://tyoon4-jpg.github.io/helical-pile/app/mobile.html
+
+It's a JavaScript port of the same calc chain (loads -> geotech -> sizing ->
+axial -> lateral p-y -> structural -> corrosion -> torque -> connection ->
+QA/QC), numerically cross-checked against the Python worked example --
+matches to full float precision except for ~1e-10-level noise in the p-y
+solver's iterative convergence. Because it's a hand port rather than a
+direct call into the library, it will NOT automatically pick up future
+fixes to `src/helical_pile_design`; re-verify it against
+`tests/test_worked_example_12m.py` after any calc-engine change.
+
+It covers the same live checks as the desktop app but not the `.docx`
+calc-package or `.dxf` CAD export -- those stay desktop-only
+(`app/streamlit_app.py`).
+
+The page is served via GitHub Pages from this repo's `main` branch, which
+requires the repo to be public.
+
 The cylindrical-shear axial method (Step 4.2, `axial.cylindrical_shear_compression_kN`)
 and the pole-to-pile connection design (Step 8, `connection.py` -- bolt
 combined tension + standoff-bending stress, weld, and torsion slip checks)
