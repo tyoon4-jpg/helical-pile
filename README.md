@@ -81,6 +81,38 @@ as static images -- auto-filled from whatever is currently in the
 sidebar. Like the rest of the app, it duplicates no calculation logic,
 only formats already-computed results into a document.
 
+The "Construction and QA/QC procedure export" button (see
+`app/construction_qaqc.py`) generates a second, separate Word `.docx` --
+a field-executable Construction and QA/QC Procedure (roles and hold
+points, pre-construction submittals, installation sequence, the
+combined torque-AND-depth termination rule, obstruction handling, an
+Inspection and Test Plan, a per-pile Installation Log template, NCR
+process, and a Final Acceptance Checklist) auto-filled with this
+project's pile configuration, minimum torque, and minimum embedment
+depth from the same sidebar. It takes a few construction-only inputs the
+structural calc chain has no use for (Owner/AHJ, foundation quantity,
+known obstructions, utility density) from a dedicated sidebar expander.
+Like the calc package, every number it shows was already computed
+upstream; this module only supplies the surrounding procedural text and
+formats the result into a document -- not a substitute for the
+Foundation Design Report or the Engineer of Record's project-specific
+direction.
+
+The "Site-safety procedure export" button (see `app/site_safety.py`)
+generates a third Word `.docx` -- a field-executable Site-Safety
+Procedure (roles and stop-work authority, a hazard register with
+controls by hierarchy covering rotating torque equipment, utility
+strikes, overhead lines, crane/lifting, traffic exposure, energized
+circuits, hot work/fume, and work at height, a permit/hold-point
+register, a PPE matrix, a tailgate briefing template, an emergency
+response plan, and a Pre-Mobilization Safety Readiness Checklist)
+auto-filled with this project's pole height and estimated lift weight
+from the same sidebar. It takes its own safety-only inputs (jurisdiction,
+site type, traffic exposure, overhead utilities, lifting method, crew
+size/shift) from a dedicated sidebar expander. It references the
+structural design and the Construction and QA/QC Procedure as adjacent
+documents rather than restating them.
+
 ## Mobile app
 
 `app/mobile.html` is a self-contained, phone-friendly calculator -- open it
@@ -98,7 +130,8 @@ fixes to `src/helical_pile_design`; re-verify it against
 `tests/test_worked_example_12m.py` after any calc-engine change.
 
 It covers the same live checks as the desktop app but not the `.docx`
-calc-package or `.dxf` CAD export -- those stay desktop-only
+calc-package, `.docx` construction/QA-QC procedure, `.docx` site-safety
+procedure, or `.dxf` CAD export -- those stay desktop-only
 (`app/streamlit_app.py`).
 
 The page is served via GitHub Pages from this repo's `main` branch, which
