@@ -564,6 +564,30 @@ def render_construction():
                    "12 m worked example. Edit any value, or run the Design agent first for an "
                    "auto-filled starting point.")
 
+    # Widgets below use explicit keys so edits persist while browsing this page; once a key
+    # exists in session_state, Streamlit ignores that widget's `value=` argument on every later
+    # render. So a fresh Design result has to be pushed into session_state explicitly, before the
+    # widgets are created, or a Design run after an earlier visit to this page would never show up.
+    if dr is not None and st.session_state.get("_cqc_synced_dr") is not dr:
+        st.session_state["_cqc_synced_dr"] = dr
+        proj = dr.get("project", {})
+        st.session_state["cqc_name"] = proj.get("name", "")
+        st.session_state["cqc_loc"] = proj.get("location", "")
+        st.session_state["cqc_eng"] = proj.get("engineer", "")
+        st.session_state["cqc_pile_config"] = dr.get("pile_config_text", "")
+        st.session_state["cqc_pole_h"] = float(dr.get("pole_height_m", 12.0))
+        st.session_state["cqc_tmin"] = float(dr.get("T_min", 5.2))
+        st.session_state["cqc_lpile"] = float(dr.get("L_pile", 4.50))
+        st.session_state["cqc_life"] = int(dr.get("design_life", 75))
+        st.session_state["cqc_kt"] = bool(dr.get("Kt_established", False))
+        st.session_state["cqc_trated"] = float(dr.get("T_rated", 15.0))
+        n_bolts_val = dr.get("n_bolts", 4)
+        st.session_state["cqc_nbolts"] = n_bolts_val if n_bolts_val in (4, 6, 8) else 4
+        st.session_state["cqc_bcr"] = float(dr.get("bolt_circle_r_mm", 175.0))
+        st.session_state["cqc_bdiam"] = float(dr.get("bolt_diam_mm", 25.0))
+        st.session_state["cqc_fillet"] = float(dr.get("fillet_mm", 8.0))
+        st.session_state["cqc_tslip"] = float(dr.get("T_slip_kNm", 30.0))
+
     with st.sidebar:
         st.header("Construction agent inputs")
 
@@ -682,6 +706,16 @@ def render_safety():
         st.caption("No Design agent result found in this session yet -- fields below default to the "
                    "12 m worked example. Edit any value, or run the Design agent first for an "
                    "auto-filled starting point.")
+
+    # See the matching comment in render_construction(): explicit widget keys mean a fresh Design
+    # result has to be pushed into session_state before the widgets are created, or it never shows.
+    if dr is not None and st.session_state.get("_ss_synced_dr") is not dr:
+        st.session_state["_ss_synced_dr"] = dr
+        proj = dr.get("project", {})
+        st.session_state["ss_name"] = proj.get("name", "")
+        st.session_state["ss_loc"] = proj.get("location", "")
+        st.session_state["ss_poleh"] = float(dr.get("pole_height_m", 12.0))
+        st.session_state["ss_polew"] = float(dr.get("pole_weight_kN", 1.75))
 
     with st.sidebar:
         st.header("Site-safety agent inputs")
