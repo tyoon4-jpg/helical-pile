@@ -18,6 +18,7 @@ import streamlit as st
 import plotly.graph_objects as go
 
 import cad
+import construction_qaqc
 import report
 from helical_pile_design import loads, geotech, sizing, axial, structural, corrosion, torque, qaqc, connection
 from helical_pile_design.lateral_py import (
@@ -119,6 +120,16 @@ with st.sidebar:
         fillet_mm = st.number_input("Shaft-to-plate fillet weld size (mm)", 4.0, 20.0, 8.0, 1.0)
         T_slip_kNm = st.number_input(
             "Pile torsional slip capacity (kN*m) [ASSUMED -- validate]", 0.0, 200.0, 30.0, 1.0)
+
+    with st.expander("Construction / QA-QC procedure inputs", expanded=False):
+        owner_agency = st.text_input("Owner / AHJ name", "")
+        ahj_type = st.selectbox("AHJ type", ["State DOT", "Municipal", "Private developer", "Other"], index=0)
+        n_foundations = st.number_input("Quantity of foundations (poles)", 1, 5000, 1, 1)
+        soil_narrative = st.text_input(
+            "Soil description (free text, e.g. 'medium-stiff clay fill over native clay')", "")
+        known_obstructions = st.text_input(
+            "Known obstructions (free text, e.g. 'cobbles reported 1-2 m depth')", "")
+        utility_density = st.selectbox("Utility density at site", ["Low", "Medium", "High"], index=0)
 
 # =====================================================================
 # Run the calc chain (library calls only -- no logic duplicated here)
@@ -417,6 +428,43 @@ if st.button("Generate CAD drawing"):
         "Download pile_configuration.dxf", data=dxf_bytes,
         file_name="pile_configuration.dxf",
         mime="application/dxf",
+    )
+
+st.divider()
+st.subheader("Construction and QA/QC procedure export")
+st.caption(
+    "Generates a field-executable Word (.docx) Construction and QA/QC Procedure -- roles, "
+    "pre-construction submittals, installation sequence, termination criteria, ITP, per-pile "
+    "Installation Log template, NCR process, and a Final Acceptance Checklist -- auto-filled "
+    "with this project's pile configuration, minimum torque, and minimum embedment depth from "
+    "the sidebar above."
+)
+if st.button("Generate construction & QA/QC procedure"):
+    helix_desc = " / ".join(f"{d:.0f}mm@{z:.2f}m" for d, z in zip(helix_diam_mm, helix_depth_m))
+    pile_config_text = (
+        f"{d_shaft_mm:.0f} mm OD x {t_nominal_mm:.1f} mm wall shaft, {n_helix} helices "
+        f"({helix_desc}), tip depth {L_pile:.2f} m"
+    )
+    cqc_ctx = dict(
+        project=dict(name=project_name, location=project_location, engineer=engineer_name,
+                     date=calc_date.isoformat() if calc_date else ""),
+        construction=dict(
+            owner_agency=owner_agency, ahj_type=ahj_type, n_foundations=n_foundations,
+            soil_narrative=soil_narrative, known_obstructions=known_obstructions,
+            utility_density=utility_density,
+        ),
+        pole_height_m=h, pile_config_text=pile_config_text,
+        T_min=T_min, L_pile=L_pile, design_life=design_life,
+        Kt_established=Kt_established, T_rated=T_rated,
+        n_bolts=n_bolts, bolt_circle_r_mm=bolt_circle_r_mm, bolt_diam_mm=bolt_diam_mm,
+        fillet_mm=fillet_mm, T_slip_kNm=T_slip_kNm,
+        triggers=triggers,
+    )
+    cqc_docx_bytes = construction_qaqc.build_construction_qaqc_docx(cqc_ctx)
+    st.download_button(
+        "Download construction_qaqc_procedure.docx", data=cqc_docx_bytes,
+        file_name="construction_qaqc_procedure.docx",
+        mime="application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     )
 
 st.divider()

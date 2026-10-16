@@ -81,6 +81,23 @@ as static images -- auto-filled from whatever is currently in the
 sidebar. Like the rest of the app, it duplicates no calculation logic,
 only formats already-computed results into a document.
 
+The "Construction and QA/QC procedure export" button (see
+`app/construction_qaqc.py`) generates a second, separate Word `.docx` --
+a field-executable Construction and QA/QC Procedure (roles and hold
+points, pre-construction submittals, installation sequence, the
+combined torque-AND-depth termination rule, obstruction handling, an
+Inspection and Test Plan, a per-pile Installation Log template, NCR
+process, and a Final Acceptance Checklist) auto-filled with this
+project's pile configuration, minimum torque, and minimum embedment
+depth from the same sidebar. It takes a few construction-only inputs the
+structural calc chain has no use for (Owner/AHJ, foundation quantity,
+known obstructions, utility density) from a dedicated sidebar expander.
+Like the calc package, every number it shows was already computed
+upstream; this module only supplies the surrounding procedural text and
+formats the result into a document -- not a substitute for the
+Foundation Design Report or the Engineer of Record's project-specific
+direction.
+
 ## Mobile app
 
 `app/mobile.html` is a self-contained, phone-friendly calculator -- open it
@@ -98,8 +115,8 @@ fixes to `src/helical_pile_design`; re-verify it against
 `tests/test_worked_example_12m.py` after any calc-engine change.
 
 It covers the same live checks as the desktop app but not the `.docx`
-calc-package or `.dxf` CAD export -- those stay desktop-only
-(`app/streamlit_app.py`).
+calc-package, `.docx` construction/QA-QC procedure, or `.dxf` CAD export
+-- those stay desktop-only (`app/streamlit_app.py`).
 
 The page is served via GitHub Pages from this repo's `main` branch, which
 requires the repo to be public.
