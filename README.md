@@ -28,8 +28,8 @@ Poles"):
 ## Install
 
 ```bash
-pip install -e ".[dev]"       # editable install + pytest
-pip install -e ".[app]"       # add streamlit + plotly for a UI layer
+python -m pip install -e ".[dev]"  # editable install + pytest
+python -m pip install -e ".[app]"  # editable install + app dependencies
 ```
 
 ## Run the regression suite
@@ -63,7 +63,7 @@ package works after installing it.
 ## Run the interactive app
 
 ```bash
-pip install -e ".[app]"
+python -m pip install -e ".[app]"
 python -m streamlit run app/streamlit_app.py
 ```
 
@@ -74,7 +74,8 @@ plots update live. This app duplicates no calculation logic -- it only
 calls into the library above, so any correctness fix belongs in the
 library (and its regression test), not in `app/streamlit_app.py`.
 
-The "Calc package export" button at the bottom of the page (see
+The "Generate calc package" button (under "Calc package export" at the
+bottom of the Design page; see
 `app/report.py`) generates a Word `.docx` -- cover page, one-page
 pass/fail checklist, and Step 1-10 detail with the Step 5 charts embedded
 as static images -- auto-filled from whatever is currently in the
