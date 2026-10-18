@@ -39,11 +39,13 @@ no UI needed.
 ## Run the interactive app
 
 ```bash
-streamlit run app/streamlit_app.py
+python -m streamlit run app/streamlit_app.py
 ```
 
-Opens at `http://localhost:8501`. Every sidebar change reruns the calc
-chain live. The "Generate calc package" button at the bottom exports a
+Opens at `http://localhost:8501` on a dashboard with three agents (Design,
+Construction & QA/QC, Site Safety). In the Design agent, every sidebar
+change reruns the calc chain live. The "Generate calc package" button at
+the bottom exports a
 Word `.docx` (cover page, one-page pass/fail checklist, Step 1-10 detail
 with charts) built from whatever is currently in the sidebar.
 
@@ -79,7 +81,8 @@ format results, never recompute anything themselves. A correctness bug
 always lives in `src/`, never in `app/`; `tests/test_worked_example_12m.py`
 is the regression anchor for the whole engine.
 
-There's also a standalone HTML/JS port of the full engine (published as a
-Claude artifact, not part of this repo) for running the calculator with no
-Python install at all -- same formulas, ported by hand and cross-checked
+There's also a standalone HTML/JS port of the full engine
+(`app/mobile.html`, published via GitHub Pages at
+https://tyoon4-jpg.github.io/helical-pile/app/mobile.html) for running the
+calculator on a phone with no Python install at all -- same formulas, ported by hand and cross-checked
 against this library's test values.
