@@ -116,7 +116,7 @@ documents rather than restating them.
 
 ## Mobile app
 
-`app/mobile.html` is a self-contained, phone-friendly calculator -- open it
+`tyoon4-jpg.github.io/helical-pile/app/mobile.html` is a self-contained, phone-friendly calculator -- open it
 in any mobile browser, no install or server required:
 
 https://tyoon4-jpg.github.io/helical-pile/app/mobile.html
